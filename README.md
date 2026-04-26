@@ -20,3 +20,10 @@ you may not have SSH access.
 
 - No CLI commands are required to view the dashboard.
 - If your host supports SQLite, data persists in `data/pricing.sqlite`.
+
+## If you see **403 Forbidden**
+
+1. Make sure files are uploaded inside your actual web root (for example `public_html/`), not above it.
+2. Keep `.htaccess`, `index.php`, and `index.html` in that same web root.
+3. Confirm folder/file permissions are readable by the web server (`755` folders, `644` files is typical).
+4. If your host disables `.htaccess`, ask support to set `DirectoryIndex index.php index.html`.
