@@ -44,7 +44,7 @@
     <section class="content" id="overviewView">
       <div class="welcome-row">
         <div><p class="eyebrow">THURSDAY, SEPTEMBER 10</p><h1>Good morning, Alex.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
-        <div class="updated"><span></span>Data refreshed 12 minutes ago</div>
+        <div class="updated"><span></span>Workspace synced · Sep 11, 2026</div>
       </div>
 
       <section class="ai-search">
@@ -53,6 +53,7 @@
         <form id="aiForm"><input id="aiInput" aria-label="Ask Northstar AI" placeholder="e.g. Show PE-owned software companies with $100M+ revenue…"><button>Ask AI <span>↗</span></button></form>
         <div class="suggestions"><span>Try asking:</span><button>AI infrastructure targets</button><button>SPACs expiring in 12 months</button><button>European data center capacity</button></div>
       </section>
+      <div class="data-notice"><span>ⓘ</span><p><strong>Demo workspace</strong> — Records are illustrative and show the intended research workflow. Production records should be verified against linked filings and company disclosures before use.</p><button id="dismissNotice" aria-label="Dismiss">×</button></div>
 
       <div class="section-head"><div><h2>Market pulse</h2><p>Key metrics across your tracked universe</p></div><select aria-label="Time period"><option>Last 30 days</option><option>Last quarter</option></select></div>
       <div class="metrics">
@@ -66,10 +67,10 @@
         <section class="panel activity-panel">
           <div class="panel-head"><div><h2>Recent activity</h2><p>Latest events across your watchlists</p></div><button>View all activity →</button></div>
           <div class="activity-list">
-            <div class="activity"><span class="activity-icon deal">↗</span><div><strong>Vista Equity Partners acquires Model N</strong><p><b>Transaction</b> · Enterprise Software</p></div><div class="activity-right"><strong>$1.25B</strong><small>2 hours ago</small></div></div>
-            <div class="activity"><span class="activity-icon funding">◆</span><div><strong>Harvey raises Series E led by Kleiner Perkins</strong><p><b>Funding</b> · AI Applications</p></div><div class="activity-right"><strong>$300M</strong><small>5 hours ago</small></div></div>
-            <div class="activity"><span class="activity-icon center">⌖</span><div><strong>Vantage announces new Frankfurt campus</strong><p><b>Data center</b> · Europe</p></div><div class="activity-right"><strong>96 MW</strong><small>Yesterday</small></div></div>
-            <div class="activity"><span class="activity-icon spac">◎</span><div><strong>Quetta Acquisition files for extension vote</strong><p><b>SPAC</b> · Deadline update</p></div><div class="activity-right"><strong>Mar 2027</strong><small>Yesterday</small></div></div>
+            <div class="activity"><span class="activity-icon deal">↗</span><div><strong>Model N taken private by Vista Equity Partners</strong><p><b>Transaction</b> · Enterprise Software</p></div><div class="activity-right"><strong>$1.25B</strong><small>Completed Jun 2024</small></div></div>
+            <div class="activity"><span class="activity-icon funding">◆</span><div><strong>AI application company added to coverage</strong><p><b>Coverage</b> · AI Applications</p></div><div class="activity-right"><strong>New</strong><small>Illustrative record</small></div></div>
+            <div class="activity"><span class="activity-icon center">⌖</span><div><strong>Frankfurt campus capacity record updated</strong><p><b>Data center</b> · Europe</p></div><div class="activity-right"><strong>Capacity</strong><small>Needs verification</small></div></div>
+            <div class="activity"><span class="activity-icon spac">◎</span><div><strong>SPAC deadline monitoring list refreshed</strong><p><b>SPAC</b> · SEC filing workflow</p></div><div class="activity-right"><strong>74 tracked</strong><small>Illustrative universe</small></div></div>
           </div>
         </section>
 
@@ -92,12 +93,14 @@
 
     <section class="content module-view hidden" id="moduleView">
       <button class="back" data-view="overview">← Back to overview</button><p class="eyebrow" id="moduleEyebrow">OPPORTUNITY DATABASE</p><h1 id="moduleTitle">Companies</h1><p class="subtitle" id="moduleSubtitle"></p>
-      <div class="module-toolbar"><input id="moduleSearch" placeholder="Search by name, sector, owner, or keyword…"><select id="moduleFilter"><option value="all">All categories</option></select><button class="primary">＋ Add record</button></div>
-      <div class="panel module-table"><table><thead id="moduleHead"></thead><tbody id="moduleBody"></tbody></table><div class="empty hidden" id="emptyState">No records match your search.</div></div>
+      <div class="module-stats" id="moduleStats"></div>
+      <div class="module-toolbar"><label class="search-field"><span>⌕</span><input id="moduleSearch" placeholder="Search by name, sector, owner, or keyword…"></label><select id="moduleFilter"><option value="all">All categories</option></select><button class="outline" id="exportBtn">⇩ Export CSV</button><button class="primary" id="addRecord">＋ Add record</button></div>
+      <div class="panel module-table"><div class="table-caption"><span id="resultCount">0 records</span><span>Click a row to open the research profile · Click a column to sort</span></div><div class="table-scroll"><table><thead id="moduleHead"></thead><tbody id="moduleBody"></tbody></table></div><div class="empty hidden" id="emptyState"><strong>No matching records</strong><span>Try removing a filter or broadening your search.</span></div></div>
     </section>
   </main>
 
   <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Northstar AI</h2><p>Ask a question across companies, facilities, transactions, and SPAC filings.</p><form id="dialogForm"><textarea placeholder="What would you like to know?"></textarea><button class="primary">Run research →</button></form><small>Answers are sourced from your workspace data and linked public disclosures.</small></dialog>
+  <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
   <script src="app.js"></script>
 </body>
