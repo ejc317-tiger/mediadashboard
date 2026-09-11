@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Northstar — Investment Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="Northstar home">
+      <span class="brand-mark"><i></i><i></i><i></i></span>
+      <span>northstar</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <p class="nav-label">Workspace</p>
+      <button class="nav-item active" data-view="overview"><span class="icon">⌂</span>Overview</button>
+      <button class="nav-item" data-view="companies"><span class="icon">▦</span>Companies<span class="count">482</span></button>
+      <button class="nav-item" data-view="datacenters"><span class="icon">⌖</span>Data centers</button>
+      <button class="nav-item" data-view="spacs"><span class="icon">◎</span>SPACs<span class="count">74</span></button>
+      <p class="nav-label second">Intelligence</p>
+      <button class="nav-item"><span class="icon">✦</span>AI Research</button>
+      <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="help"><span>?</span>Help center</button>
+      <div class="profile"><div class="avatar">AK</div><div><strong>Alex Kim</strong><small>Investment Banking</small></div><button>•••</button></div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div class="crumb"><span>Northstar</span><b>/</b><strong id="pageCrumb">Overview</strong></div>
+      <div class="top-actions">
+        <button class="icon-btn" aria-label="Notifications">♢<i></i></button>
+        <button class="outline">＋ Add company</button>
+        <button class="primary" id="askAi">✦ Ask Northstar AI</button>
+      </div>
+    </header>
+
+    <section class="content" id="overviewView">
+      <div class="welcome-row">
+        <div><p class="eyebrow">THURSDAY, SEPTEMBER 10</p><h1>Good morning, Alex.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
+        <div class="updated"><span></span>Data refreshed 12 minutes ago</div>
+      </div>
+
+      <section class="ai-search">
+        <div class="spark">✦</div>
+        <div class="ai-copy"><strong>Ask anything across your data</strong><span>Search companies, data centers, transactions, and SPACs in natural language</span></div>
+        <form id="aiForm"><input id="aiInput" aria-label="Ask Northstar AI" placeholder="e.g. Show PE-owned software companies with $100M+ revenue…"><button>Ask AI <span>↗</span></button></form>
+        <div class="suggestions"><span>Try asking:</span><button>AI infrastructure targets</button><button>SPACs expiring in 12 months</button><button>European data center capacity</button></div>
+      </section>
+
+      <div class="section-head"><div><h2>Market pulse</h2><p>Key metrics across your tracked universe</p></div><select aria-label="Time period"><option>Last 30 days</option><option>Last quarter</option></select></div>
+      <div class="metrics">
+        <article class="metric"><div class="metric-top"><span class="metric-icon purple">▦</span><span class="trend up">↗ 8.2%</span></div><strong>482</strong><p>Tracked companies</p><div class="bar"><i style="width:68%"></i></div><small>37 added this month</small></article>
+        <article class="metric"><div class="metric-top"><span class="metric-icon coral">⌁</span><span class="trend up">↗ 12.4%</span></div><strong>156</strong><p>AI companies</p><div class="bar coralbar"><i style="width:54%"></i></div><small>19 added this month</small></article>
+        <article class="metric"><div class="metric-top"><span class="metric-icon blue">⌖</span><span class="trend up">↗ 5.7%</span></div><strong>1,248 <em>MW</em></strong><p>Tracked data center capacity</p><div class="bar bluebar"><i style="width:79%"></i></div><small>68 MW added this month</small></article>
+        <article class="metric"><div class="metric-top"><span class="metric-icon green">◎</span><span class="trend down">↘ 3.1%</span></div><strong>74</strong><p>Active SPACs</p><div class="bar greenbar"><i style="width:44%"></i></div><small>6 approaching deadline</small></article>
+      </div>
+
+      <div class="dashboard-grid">
+        <section class="panel activity-panel">
+          <div class="panel-head"><div><h2>Recent activity</h2><p>Latest events across your watchlists</p></div><button>View all activity →</button></div>
+          <div class="activity-list">
+            <div class="activity"><span class="activity-icon deal">↗</span><div><strong>Vista Equity Partners acquires Model N</strong><p><b>Transaction</b> · Enterprise Software</p></div><div class="activity-right"><strong>$1.25B</strong><small>2 hours ago</small></div></div>
+            <div class="activity"><span class="activity-icon funding">◆</span><div><strong>Harvey raises Series E led by Kleiner Perkins</strong><p><b>Funding</b> · AI Applications</p></div><div class="activity-right"><strong>$300M</strong><small>5 hours ago</small></div></div>
+            <div class="activity"><span class="activity-icon center">⌖</span><div><strong>Vantage announces new Frankfurt campus</strong><p><b>Data center</b> · Europe</p></div><div class="activity-right"><strong>96 MW</strong><small>Yesterday</small></div></div>
+            <div class="activity"><span class="activity-icon spac">◎</span><div><strong>Quetta Acquisition files for extension vote</strong><p><b>SPAC</b> · Deadline update</p></div><div class="activity-right"><strong>Mar 2027</strong><small>Yesterday</small></div></div>
+          </div>
+        </section>
+
+        <section class="panel map-panel">
+          <div class="panel-head"><div><h2>Data center footprint</h2><p>Capacity by region</p></div><button class="dots">•••</button></div>
+          <div class="map" aria-label="Stylized map showing data center locations">
+            <svg viewBox="0 0 650 310" role="img"><path d="M33 78l41-38 74-12 55 22 26 37-30 24-29 53-31 14-20-38-39-15-31-7zM166 186l38 20 23 53-25 44-25-44-16-43zM299 55l45-20 40 13 8 22 70-13 76 21 73 49-20 28-69 4-21 29-51-13-38 15-34-30-48-16-25-31-24-11zM382 181l45 4 34 38-4 64-47 13-31-56zM525 234l42-20 44 17 11 34-50 13-42-15z"/></svg>
+            <button class="pin p1" data-tip="Virginia · 342 MW"><i></i><span>342 MW</span></button><button class="pin p2" data-tip="Oregon · 124 MW"><i></i></button><button class="pin p3" data-tip="Frankfurt · 208 MW"><i></i><span>208 MW</span></button><button class="pin p4" data-tip="Singapore · 164 MW"><i></i></button><button class="pin p5" data-tip="Sydney · 92 MW"><i></i></button>
+          </div>
+          <div class="region-row"><div><i class="dot-purple"></i><span>North America</span><strong>512 MW</strong></div><div><i class="dot-orange"></i><span>Europe</span><strong>328 MW</strong></div><div><i class="dot-blue"></i><span>Asia Pacific</span><strong>284 MW</strong></div></div>
+          <button class="full-map" data-view="datacenters">Explore interactive map <span>→</span></button>
+        </section>
+      </div>
+
+      <div class="dashboard-grid lower">
+        <section class="panel watch-panel"><div class="panel-head"><div><h2>Companies to watch</h2><p>Recently updated or showing activity</p></div><button data-view="companies">View all →</button></div><table><thead><tr><th>COMPANY</th><th>SECTOR</th><th>OWNERSHIP</th><th>LAST EVENT</th></tr></thead><tbody id="companyRows"></tbody></table></section>
+        <section class="panel deadline-panel"><div class="panel-head"><div><h2>SPAC deadlines</h2><p>Upcoming completion windows</p></div><button data-view="spacs">View all →</button></div><div id="spacRows"></div></section>
+      </div>
+    </section>
+
+    <section class="content module-view hidden" id="moduleView">
+      <button class="back" data-view="overview">← Back to overview</button><p class="eyebrow" id="moduleEyebrow">OPPORTUNITY DATABASE</p><h1 id="moduleTitle">Companies</h1><p class="subtitle" id="moduleSubtitle"></p>
+      <div class="module-toolbar"><input id="moduleSearch" placeholder="Search by name, sector, owner, or keyword…"><select id="moduleFilter"><option value="all">All categories</option></select><button class="primary">＋ Add record</button></div>
+      <div class="panel module-table"><table><thead id="moduleHead"></thead><tbody id="moduleBody"></tbody></table><div class="empty hidden" id="emptyState">No records match your search.</div></div>
+    </section>
+  </main>
+
+  <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Northstar AI</h2><p>Ask a question across companies, facilities, transactions, and SPAC filings.</p><form id="dialogForm"><textarea placeholder="What would you like to know?"></textarea><button class="primary">Run research →</button></form><small>Answers are sourced from your workspace data and linked public disclosures.</small></dialog>
+  <div id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
