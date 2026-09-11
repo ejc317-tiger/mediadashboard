@@ -51,8 +51,10 @@ function installSchemaIfPresent(array $config): void
             throw new RuntimeException('The bundled database schema is unreadable.');
         }
 
-        $serverDsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['host'], $config['port']);
-        $installer = new PDO($serverDsn, $config['username'], $config['password'], [
+        // Shared-hosting users normally own an existing database but do not
+        // have server-wide CREATE DATABASE permission. Install inside it.
+        $installerDsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $config['host'], $config['port'], $config['database']);
+        $installer = new PDO($installerDsn, $config['username'], $config['password'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);

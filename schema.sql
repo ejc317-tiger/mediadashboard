@@ -1,7 +1,4 @@
-CREATE DATABASE IF NOT EXISTS rive4320_ibd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE rive4320_ibd;
-
-CREATE TABLE companies (
+CREATE TABLE IF NOT EXISTS companies (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(180) NOT NULL,
   category VARCHAR(100) NOT NULL,
@@ -18,7 +15,7 @@ CREATE TABLE companies (
   UNIQUE KEY uq_company_name (name), KEY idx_company_category (category), KEY idx_company_owner (ownership), FULLTEXT KEY ft_company_research (name, category, ownership, description)
 );
 
-CREATE TABLE data_centers (
+CREATE TABLE IF NOT EXISTS data_centers (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(180) NOT NULL, category VARCHAR(100) NOT NULL, location VARCHAR(180) NOT NULL,
   owner VARCHAR(180), builder VARCHAR(180), power VARCHAR(100), tenant VARCHAR(180), financing VARCHAR(255), status VARCHAR(50),
@@ -28,7 +25,7 @@ CREATE TABLE data_centers (
   UNIQUE KEY uq_dc_name (name), KEY idx_dc_region (category), KEY idx_dc_owner (owner)
 );
 
-CREATE TABLE spacs (
+CREATE TABLE IF NOT EXISTS spacs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(180) NOT NULL, category VARCHAR(100) NOT NULL, sponsor VARCHAR(180), ipo_size VARCHAR(80), deadline DATE,
   remaining VARCHAR(80), status VARCHAR(50), as_of_date DATE, description TEXT, source_name VARCHAR(180), source_url VARCHAR(2048),
