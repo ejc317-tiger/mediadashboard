@@ -43,7 +43,7 @@
 
     <section class="content" id="overviewView">
       <div class="welcome-row">
-        <div><p class="eyebrow">THURSDAY, SEPTEMBER 10</p><h1>Good morning, Alex.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
+        <div><p class="eyebrow">FRIDAY, SEPTEMBER 11</p><h1>Good morning, Alex.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
         <div class="updated"><span></span>Workspace synced · Sep 11, 2026</div>
       </div>
 
@@ -102,6 +102,6 @@
   <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Northstar AI</h2><p>Ask a question across companies, facilities, transactions, and SPAC filings.</p><form id="dialogForm"><textarea placeholder="What would you like to know?"></textarea><button class="primary">Run research →</button></form><small>Answers are sourced from your workspace data and linked public disclosures.</small></dialog>
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
