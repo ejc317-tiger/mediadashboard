@@ -17,6 +17,8 @@ function database(): PDO
         'password' => getenv('DB_PASSWORD') ?: '',
     ], is_array($fileConfig) ? $fileConfig : []);
 
+    installSchemaIfPresent($config);
+
     $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $config['host'], $config['port'], $config['database']);
     $connection = new PDO($dsn, $config['username'], $config['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -24,4 +26,43 @@ function database(): PDO
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     return $connection;
+}
+
+/** Install the bundled schema once and remove it after a successful import. */
+function installSchemaIfPresent(array $config): void
+{
+    $schemaPath = __DIR__ . '/schema.sql';
+    if (!is_file($schemaPath)) {
+        return;
+    }
+
+    $lock = fopen(sys_get_temp_dir() . '/northstar-schema-install.lock', 'c');
+    if ($lock === false || !flock($lock, LOCK_EX)) {
+        throw new RuntimeException('Unable to lock the database installer.');
+    }
+
+    try {
+        clearstatcache(true, $schemaPath);
+        if (!is_file($schemaPath)) {
+            return;
+        }
+        $schema = file_get_contents($schemaPath);
+        if ($schema === false || trim($schema) === '') {
+            throw new RuntimeException('The bundled database schema is unreadable.');
+        }
+
+        $serverDsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['host'], $config['port']);
+        $installer = new PDO($serverDsn, $config['username'], $config['password'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+        $installer->exec($schema);
+
+        if (!unlink($schemaPath)) {
+            throw new RuntimeException('Schema installed, but schema.sql could not be deleted.');
+        }
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
 }

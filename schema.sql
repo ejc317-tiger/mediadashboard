@@ -43,4 +43,5 @@ INSERT INTO companies (name,category,ownership,status,metric,as_of_date,descript
 ('Proofpoint','Cybersecurity','Thoma Bravo','PE-backed','$12.3B take-private','2021-08-31','Human-centric cybersecurity and compliance software for enterprises.','Company announcement','https://www.proofpoint.com/us/newsroom/press-releases/proofpoint-announces-closing-acquisition-thoma-bravo','Verified'),
 ('Harvey','AI Applications','Venture-backed','Private','Valuation requires refresh','2026-09-11','Domain-specific generative AI platform for legal and professional services workflows.','Workspace research','#','Review'),
 ('Dataiku','AI Platforms','Venture-backed','Private','Valuation requires refresh','2026-09-11','Collaborative enterprise platform for analytics, machine learning, and generative AI.','Workspace research','#','Review'),
-('CoreWeave','AI Compute','Public','Public','Public market','2026-09-11','Cloud infrastructure optimized for accelerated computing and AI workloads.','Company filings','https://investors.coreweave.com/','Refresh');
+('CoreWeave','AI Compute','Public','Public','Public market','2026-09-11','Cloud infrastructure optimized for accelerated computing and AI workloads.','Company filings','https://investors.coreweave.com/','Refresh')
+ON DUPLICATE KEY UPDATE name = VALUES(name);

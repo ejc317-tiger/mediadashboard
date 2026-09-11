@@ -1,3 +1,8 @@
+<?php
+declare(strict_types=1);
+require __DIR__ . '/db.php';
+database();
+?>
 <!doctype html>
 <html lang="en">
 <head>

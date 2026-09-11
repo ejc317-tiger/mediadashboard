@@ -2,9 +2,10 @@
 
 ## Local setup
 
-1. Create MySQL tables and seed the company records: `mysql -u root -p < schema.sql`.
-2. Copy `config.php.example` to `config.php` and set the MySQL credentials, or set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
-3. Start PHP: `php -S 127.0.0.1:4173`.
-4. Open `http://127.0.0.1:4173`.
+1. Copy `config.php.example` to `config.php` and set credentials for a MySQL user that can create the configured database, or set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
+2. Start PHP: `php -S 127.0.0.1:4173`.
+3. Open `http://127.0.0.1:4173`.
+
+On the first request, PHP automatically imports `schema.sql`, creates the database and tables, seeds the initial company records, and deletes `schema.sql` only after the import succeeds. A filesystem lock prevents concurrent first requests from running the installer twice. If installation fails, the schema remains available for the next request after the configuration is corrected.
 
 All dashboard records are loaded through `api.php`; the browser bundle contains no embedded company dataset. The API uses PDO prepared statements for filters and a strict allowlist for table, column, and sort identifiers.
