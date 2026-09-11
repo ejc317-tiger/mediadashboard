@@ -2,7 +2,7 @@
 
 ## Local setup
 
-1. Copy `config.php.example` to `config.php` and set credentials for a MySQL user that can create the configured database, or set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
+1. The application uses the bundled MySQL database name, username, and password. Set `DB_HOST` and `DB_PORT` only when MySQL is not running at `127.0.0.1:3306`.
 2. Start PHP: `php -S 127.0.0.1:4173`.
 3. Open `http://127.0.0.1:4173`.
 

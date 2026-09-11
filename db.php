@@ -12,10 +12,10 @@ function database(): PDO
     $config = array_merge([
         'host' => getenv('DB_HOST') ?: '127.0.0.1',
         'port' => getenv('DB_PORT') ?: '3306',
-        'database' => getenv('DB_NAME') ?: 'northstar',
-        'username' => getenv('DB_USER') ?: 'northstar',
-        'password' => getenv('DB_PASSWORD') ?: '',
     ], is_array($fileConfig) ? $fileConfig : []);
+    $config['database'] = 'rive4320_ibd';
+    $config['username'] = 'rive4320_ibd';
+    $config['password'] = 'rive4320_IBD$$';
 
     installSchemaIfPresent($config);
 

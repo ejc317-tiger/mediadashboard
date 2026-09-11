@@ -1,9 +1,6 @@
 <?php
-/** Copy this file to config.php, or provide the equivalent environment variables. */
+/** Optional host override; database credentials are fixed in db.php. */
 return [
     'host' => getenv('DB_HOST') ?: '127.0.0.1',
     'port' => getenv('DB_PORT') ?: '3306',
-    'database' => getenv('DB_NAME') ?: 'northstar',
-    'username' => getenv('DB_USER') ?: 'northstar',
-    'password' => getenv('DB_PASSWORD') ?: '',
 ];
