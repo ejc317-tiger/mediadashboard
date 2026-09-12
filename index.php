@@ -33,7 +33,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <button class="nav-item" data-view="datacenters"><span class="icon">⌖</span>Datacenter map</button>
       <button class="nav-item" data-view="spacs"><span class="icon">◎</span>SPACs</button>
       <p class="nav-label second">Intelligence</p>
-      <button class="nav-item" id="navAiResearch"><span class="icon">✦</span>AI Research</button>
+      <button class="nav-item" data-view="research"><span class="icon">✦</span>Company research</button>
       <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
       <button class="nav-item" data-view="settings"><span class="icon">⚙</span>Settings</button>
     </nav>
@@ -110,6 +110,12 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <section class="content settings-view hidden" id="settingsView">
       <p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Check server services and repair recoverable configuration issues.</p>
       <section class="panel settings-panel"><div><h2>Database connection</h2><p>Connect to MySQL, verify every required dashboard table, and automatically restore missing tables from the bundled schema.</p></div><button class="primary" id="checkDatabase">Check and repair</button><div class="health-result" id="databaseHealth" role="status">Not checked yet.</div></section>
+      <section class="panel settings-panel"><div><h2>OpenAI API key</h2><p>Replace the server-side key used for company research. The saved value is never returned to the browser.</p></div><form class="key-form" id="apiKeyForm"><input type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" aria-label="New OpenAI API key" required><button class="primary">Save key</button></form><div class="health-result" id="apiKeyResult" role="status">Enter a new key to replace the current setting.</div></section>
+    </section>
+
+    <section class="content research-view hidden" id="researchView">
+      <p class="eyebrow">COMPANY &amp; INVESTOR INTELLIGENCE</p><h1>Company research</h1><p class="subtitle">Research a company or investment firm using public sources, then add the sourced result to the appropriate database.</p>
+      <section class="panel research-panel"><form id="researchForm"><label>Research target<select id="researchType"><option value="company">Company</option><option value="investor">Investor (VC or private equity)</option></select></label><label>Name or research question<input id="researchQuery" required placeholder="e.g. Research Acme AI, its latest round and investors"></label><label class="confirm-update"><input type="checkbox" required> Add sourced results and relationships to the live database for analyst review.</label><button class="primary">Research and add →</button></form><div class="health-result" id="researchResult" role="status">No research run yet.</div></section>
     </section>
   </main>
 
@@ -117,6 +123,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

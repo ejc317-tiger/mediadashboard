@@ -9,6 +9,12 @@ declare(strict_types=1);
  */
 function openAiApiKey(array $siteConfig = []): string
 {
+    $settingsFile = __DIR__ . '/.openai-api-key';
+    if (is_file($settingsFile) && is_readable($settingsFile)) {
+        $settingsKey = trim((string) file_get_contents($settingsFile));
+        if ($settingsKey !== '') return $settingsKey;
+    }
+
     $environmentKey = trim((string) (getenv('OPENAI_API_KEY') ?: ''));
     if ($environmentKey !== '') return $environmentKey;
 
@@ -23,4 +29,17 @@ function openAiApiKey(array $siteConfig = []): string
     }
 
     return trim((string) ($siteConfig['openai_api_key'] ?? ''));
+}
+
+function saveOpenAiApiKey(string $key): void
+{
+    $key = trim($key);
+    if (!preg_match('/^sk-[A-Za-z0-9_-]{20,}$/', $key)) {
+        throw new InvalidArgumentException('Enter a valid OpenAI API key beginning with sk-.');
+    }
+    $path = __DIR__ . '/.openai-api-key';
+    if (file_put_contents($path, $key . "\n", LOCK_EX) === false) {
+        throw new RuntimeException('The API key could not be saved. Check directory write permissions.');
+    }
+    @chmod($path, 0600);
 }
