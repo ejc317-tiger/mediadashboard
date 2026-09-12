@@ -38,7 +38,7 @@ function database(): PDO
     return $connection;
 }
 
-/** Apply each schema revision once, while keeping schema.sql for recovery. */
+/** Apply each schema revision and restore any missing application tables. */
 function installSchema(PDO $connection): void
 {
     $schemaPath = __DIR__ . '/schema.sql';
@@ -55,11 +55,33 @@ function installSchema(PDO $connection): void
         $connection->exec('CREATE TABLE IF NOT EXISTS schema_migrations (schema_hash CHAR(64) PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
         $check = $connection->prepare('SELECT 1 FROM schema_migrations WHERE schema_hash = ?');
         $check->execute([$hash]);
-        if ($check->fetchColumn()) return;
+        if ($check->fetchColumn() && requiredTablesExist($connection)) return;
         $connection->exec($schema);
-        $connection->prepare('INSERT INTO schema_migrations(schema_hash) VALUES(?)')->execute([$hash]);
+        $connection->prepare('INSERT INTO schema_migrations(schema_hash) VALUES(?) ON DUPLICATE KEY UPDATE applied_at=CURRENT_TIMESTAMP')->execute([$hash]);
     } finally {
         flock($lock, LOCK_UN);
         fclose($lock);
     }
+}
+
+/** Confirm that every table used by the dashboard is present in this database. */
+function requiredTablesExist(PDO $connection): bool
+{
+    $requiredTables = [
+        'users',
+        'ai_update_runs',
+        'ai_run_sources',
+        'data_sources',
+        'companies',
+        'private_equity_firms',
+        'vc_firms',
+        'company_pe_ownership',
+        'company_vc_investments',
+        'spac_vehicles',
+        'data_centers',
+    ];
+    $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
+    $statement = $connection->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders)");
+    $statement->execute($requiredTables);
+    return (int) $statement->fetchColumn() === count($requiredTables);
 }

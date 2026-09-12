@@ -6,7 +6,7 @@
 2. Start PHP: `php -S 127.0.0.1:4173`.
 3. Open `http://127.0.0.1:4173`.
 
-On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. The schema file remains deployed for recovery and each revision is applied exactly once using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
+On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
 
 If the server returns HTTP 403, confirm the upload directory is web-accessible and that Apache honors the included `.htaccess`. The dashboard must be opened through `index.php`, not by browsing `schema.sql` or another protected support file.
 
