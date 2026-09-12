@@ -24,6 +24,7 @@ database();
       <p class="nav-label">Workspace</p>
       <button class="nav-item active" data-view="overview"><span class="icon">⌂</span>Overview</button>
       <button class="nav-item" data-view="companies"><span class="icon">▦</span>Companies<span class="count">482</span></button>
+      <button class="nav-item" data-view="vcfirms"><span class="icon">◇</span>VC portfolios</button>
       <button class="nav-item" data-view="datacenters"><span class="icon">⌖</span>Data centers</button>
       <button class="nav-item" data-view="spacs"><span class="icon">◎</span>SPACs<span class="count">74</span></button>
       <p class="nav-label second">Intelligence</p>

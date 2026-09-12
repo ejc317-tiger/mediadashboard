@@ -9,6 +9,7 @@ $resources = [
     'companies' => ['table' => 'companies', 'columns' => ['name','category','ownership','status','metric','as_of_date','description','source_name','source_url','confidence']],
     'datacenters' => ['table' => 'data_centers', 'columns' => ['name','category','location','owner','builder','power','tenant','financing','status','as_of_date','description','source_name','source_url','confidence']],
     'spacs' => ['table' => 'spacs', 'columns' => ['name','category','sponsor','ipo_size','deadline','remaining','status','as_of_date','description','source_name','source_url','confidence']],
+    'vcfirms' => ['table' => 'vc_firms', 'columns' => ['name','category','headquarters','description','source_name','source_url','confidence']],
 ];
 
 try {
@@ -30,8 +31,17 @@ try {
     $parameters = [];
     if ($search !== '') {
         $searchable = array_filter($definition['columns'], fn(string $column): bool => !in_array($column, ['as_of_date','deadline'], true));
-        $where[] = '(' . implode(' OR ', array_map(fn(string $column): string => "`$column` LIKE :search", $searchable)) . ')';
-        $parameters['search'] = '%' . $search . '%';
+        $searchClauses = [];
+        foreach (array_values($searchable) as $index => $column) {
+            $parameter = "search$index";
+            $searchClauses[] = "`$column` LIKE :$parameter";
+            $parameters[$parameter] = '%' . $search . '%';
+        }
+        if ($resource === 'companies') {
+            $searchClauses[] = 'EXISTS (SELECT 1 FROM ai_company_investors aci JOIN vc_firms vf ON vf.id = aci.vc_firm_id WHERE aci.company_id = companies.id AND vf.name LIKE :investorSearch)';
+            $parameters['investorSearch'] = '%' . $search . '%';
+        }
+        $where[] = '(' . implode(' OR ', $searchClauses) . ')';
     }
     if ($category !== '' && $category !== 'all') {
         $where[] = '`category` = :category';
@@ -45,6 +55,30 @@ try {
     $statement = database()->prepare($sql);
     $statement->execute($parameters);
     $records = $statement->fetchAll();
+
+    if ($resource === 'companies' && $records) {
+        $ids = array_column($records, 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $investors = database()->prepare("SELECT aci.company_id, vf.name, aci.round_name, aci.announced_date, aci.is_lead FROM ai_company_investors aci JOIN vc_firms vf ON vf.id = aci.vc_firm_id WHERE aci.company_id IN ($placeholders) ORDER BY vf.name");
+        $investors->execute($ids);
+        $byCompany = [];
+        foreach ($investors->fetchAll() as $investor) $byCompany[$investor['company_id']][] = $investor;
+        foreach ($records as &$record) $record['investors'] = $byCompany[$record['id']] ?? [];
+        unset($record);
+    }
+    if ($resource === 'vcfirms' && $records) {
+        $ids = array_column($records, 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $portfolio = database()->prepare("SELECT aci.vc_firm_id, c.id, c.name, c.category, c.status, aci.round_name, aci.announced_date, aci.is_lead FROM ai_company_investors aci JOIN companies c ON c.id = aci.company_id WHERE aci.vc_firm_id IN ($placeholders) ORDER BY c.name");
+        $portfolio->execute($ids);
+        $byFirm = [];
+        foreach ($portfolio->fetchAll() as $company) $byFirm[$company['vc_firm_id']][] = $company;
+        foreach ($records as &$record) {
+            $record['portfolio'] = $byFirm[$record['id']] ?? [];
+            $record['portfolio_count'] = count($record['portfolio']);
+        }
+        unset($record);
+    }
 
     $categoryStatement = database()->query("SELECT DISTINCT `category` FROM `{$definition['table']}` WHERE `category` IS NOT NULL ORDER BY `category`");
     $categories = array_column($categoryStatement->fetchAll(), 'category');

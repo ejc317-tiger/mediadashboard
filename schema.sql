@@ -34,6 +34,33 @@ CREATE TABLE IF NOT EXISTS spacs (
   UNIQUE KEY uq_spac_name (name), KEY idx_spac_deadline (deadline), KEY idx_spac_sponsor (sponsor)
 );
 
+CREATE TABLE IF NOT EXISTS vc_firms (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  category VARCHAR(100) NOT NULL DEFAULT 'Venture Capital',
+  headquarters VARCHAR(180),
+  description TEXT,
+  source_name VARCHAR(180),
+  source_url VARCHAR(2048),
+  confidence ENUM('Verified','Refresh','Review') NOT NULL DEFAULT 'Review',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_vc_firm_name (name), FULLTEXT KEY ft_vc_firm_research (name, description)
+);
+
+CREATE TABLE IF NOT EXISTS ai_company_investors (
+  company_id BIGINT UNSIGNED NOT NULL,
+  vc_firm_id BIGINT UNSIGNED NOT NULL,
+  round_name VARCHAR(100),
+  announced_date DATE,
+  is_lead BOOLEAN NOT NULL DEFAULT FALSE,
+  source_url VARCHAR(2048),
+  PRIMARY KEY (company_id, vc_firm_id),
+  CONSTRAINT fk_investment_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  CONSTRAINT fk_investment_firm FOREIGN KEY (vc_firm_id) REFERENCES vc_firms(id) ON DELETE CASCADE,
+  KEY idx_investment_firm (vc_firm_id), KEY idx_investment_round (announced_date)
+);
+
 INSERT INTO companies (name,category,ownership,status,metric,as_of_date,description,source_name,source_url,confidence) VALUES
 ('Model N','Enterprise Software','Vista Equity Partners','Private','$1.25B take-private','2024-06-27','Revenue optimization and compliance software for life sciences and high-tech companies.','Company announcement','https://www.modeln.com/company/news/media-center/vista-equity-partners-completes-acquisition-of-model-n/','Verified'),
 ('Cloudera','Data & Analytics','CD&R / KKR','PE-backed','$5.3B take-private','2021-10-08','Enterprise data cloud platform spanning data engineering, analytics, and machine learning.','Company announcement','https://www.cloudera.com/about/news-and-blogs/press-releases/2021-10-08-cloudera-completes-agreement-to-be-acquired-by-cd-r-and-kkr.html','Verified'),
@@ -42,3 +69,17 @@ INSERT INTO companies (name,category,ownership,status,metric,as_of_date,descript
 ('Dataiku','AI Platforms','Venture-backed','Private','Valuation requires refresh','2026-09-11','Collaborative enterprise platform for analytics, machine learning, and generative AI.','Workspace research','#','Review'),
 ('CoreWeave','AI Compute','Public','Public','Public market','2026-09-11','Cloud infrastructure optimized for accelerated computing and AI workloads.','Company filings','https://investors.coreweave.com/','Refresh')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO vc_firms (name,category,headquarters,description,source_name,source_url,confidence) VALUES
+('Sequoia Capital','Multi-stage VC','Menlo Park, United States','Venture capital firm investing across technology stages, including AI application companies.','Firm portfolio','https://www.sequoiacap.com/companies/','Review'),
+('Kleiner Perkins','Multi-stage VC','Menlo Park, United States','Venture capital firm focused on enterprise, consumer, fintech, hardtech, and healthcare companies.','Firm portfolio','https://www.kleinerperkins.com/companies/','Review'),
+('ICONIQ Growth','Growth equity','San Francisco, United States','Technology growth investor partnering with enterprise software and data companies.','Firm portfolio','https://www.iconiqcapital.com/growth/portfolio','Review'),
+('CapitalG','Growth equity','San Francisco, United States','Alphabet independent growth fund investing in technology companies.','Firm portfolio','https://capitalg.com/portfolio/','Review'),
+('Magnetar Capital','Alternative investment','Evanston, United States','Alternative asset manager with investments in technology and infrastructure businesses.','Firm website','https://www.magnetar.com/','Review')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT IGNORE INTO ai_company_investors (company_id,vc_firm_id,round_name,announced_date,is_lead,source_url)
+SELECT c.id,v.id,'Private financing',NULL,FALSE,v.source_url FROM companies c JOIN vc_firms v
+WHERE (c.name='Harvey' AND v.name IN ('Sequoia Capital','Kleiner Perkins'))
+   OR (c.name='Dataiku' AND v.name IN ('ICONIQ Growth','CapitalG'))
+   OR (c.name='CoreWeave' AND v.name='Magnetar Capital');
