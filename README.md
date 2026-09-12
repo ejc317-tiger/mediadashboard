@@ -6,7 +6,9 @@
 2. Start PHP: `php -S 127.0.0.1:4173`.
 3. Open `http://127.0.0.1:4173`.
 
-On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. The schema file remains deployed for recovery and each revision is applied exactly once using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
+On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
+
+Authenticated users can also open **Settings** and select **Check and repair**. The CSRF-protected health check connects without running the installer first, records which tables are missing, applies the schema, verifies the result, and reports exactly which tables were repaired.
 
 If the server returns HTTP 403, confirm the upload directory is web-accessible and that Apache honors the included `.htaccess`. The dashboard must be opened through `index.php`, not by browsing `schema.sql` or another protected support file.
 
@@ -16,7 +18,7 @@ Companies live in one canonical `companies` table so every relationship points t
 
 ## Authentication and AI updates
 
-The first visit to `login.php` creates the initial administrator with a securely hashed password. Subsequent visitors must authenticate. Set `OPENAI_API_KEY` on the PHP server to enable **Research and update**, or copy `config.php.example` to the gitignored `config.php` and set `openai_api_key`; optionally set `OPENAI_MODEL`. Environment configuration takes precedence. The AI endpoint only accepts sourced records with valid public URLs, writes through allowlisted table/column mappings in a transaction, and marks every result `Review` for analyst verification.
+The first visit to `login.php` creates the initial administrator with a securely hashed password. Subsequent visitors must authenticate. Set `OPENAI_API_KEY` on the PHP server to enable **Research and update**. For platforms that mount secrets as files, set `OPENAI_API_KEY_FILE` to the absolute path of the mounted secret instead. As a legacy fallback, copy `config.php.example` to the gitignored `config.php` and set `openai_api_key`; optionally set `OPENAI_MODEL`. Environment configuration takes precedence over the mounted file, which takes precedence over `config.php`. Never place a live API key in a tracked file. The AI endpoint only accepts sourced records with valid public URLs, writes through allowlisted table/column mappings in a transaction, and marks every result `Review` for analyst verification.
 
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
 

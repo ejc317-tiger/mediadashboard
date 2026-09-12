@@ -35,6 +35,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <p class="nav-label second">Intelligence</p>
       <button class="nav-item" id="navAiResearch"><span class="icon">✦</span>AI Research</button>
       <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
+      <button class="nav-item" data-view="settings"><span class="icon">⚙</span>Settings</button>
     </nav>
     <div class="sidebar-foot">
       <button class="help"><span>?</span>Help center</button>
@@ -105,12 +106,17 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <div class="module-toolbar"><label class="search-field"><span>⌕</span><input id="moduleSearch" placeholder="Search by name, sector, owner, or keyword…"></label><select id="moduleFilter"><option value="all">All categories</option></select><button class="outline" id="exportBtn">⇩ Export CSV</button><button class="primary" id="addRecord">＋ Add record</button></div>
       <div class="panel module-table"><div class="table-caption"><span id="resultCount">0 records</span><span>Click a row to open the research profile · Click a column to sort</span></div><div class="table-scroll"><table><thead id="moduleHead"></thead><tbody id="moduleBody"></tbody></table></div><div class="empty hidden" id="emptyState"><strong>No matching records</strong><span>Try removing a filter or broadening your search.</span></div></div>
     </section>
+
+    <section class="content settings-view hidden" id="settingsView">
+      <p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Check server services and repair recoverable configuration issues.</p>
+      <section class="panel settings-panel"><div><h2>Database connection</h2><p>Connect to MySQL, verify every required dashboard table, and automatically restore missing tables from the bundled schema.</p></div><button class="primary" id="checkDatabase">Check and repair</button><div class="health-result" id="databaseHealth" role="status">Not checked yet.</div></section>
+    </section>
   </main>
 
   <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Research & update databases</h2><p>Ask AI to research records. Verified structured results will be written to the appropriate database.</p><form id="dialogForm"><textarea placeholder="Example: Research AI legal software companies and add their latest investors and valuations." required></textarea><label class="confirm-update"><input type="checkbox" required> I understand this will update the live database.</label><button class="primary">Research and update →</button></form><small>Every inserted record must include a source URL and is marked for review.</small><div class="source-badges"><span>Web search</span><span>PitchBook</span><span>Crunchbase</span><span>SEC / filings</span><span>Finance databases</span></div></dialog>
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -3,6 +3,8 @@
 return [
     'host' => getenv('DB_HOST') ?: 'localhost',
     'port' => getenv('DB_PORT') ?: '3306',
-    // Keep the real key in the gitignored config.php or server environment.
+    // Prefer OPENAI_API_KEY or a server-mounted OPENAI_API_KEY_FILE.
+    'openai_api_key_file' => getenv('OPENAI_API_KEY_FILE') ?: '',
+    // Backward-compatible fallback: only set this in the gitignored config.php.
     'openai_api_key' => getenv('OPENAI_API_KEY') ?: '',
 ];
