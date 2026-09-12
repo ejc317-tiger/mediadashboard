@@ -21,9 +21,9 @@ async function request(resource, parameters={}){
 }
 async function openView(name){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
-  $('#pageCrumb').textContent=name==='overview'?'Overview':viewConfig[name].title;
-  $('#overviewView').classList.toggle('hidden',name!=='overview'); $('#moduleView').classList.toggle('hidden',name==='overview');
-  currentView=name;if(name==='overview')return;
+  $('#pageCrumb').textContent=name==='overview'?'Overview':name==='settings'?'Settings':viewConfig[name].title;
+  $('#overviewView').classList.toggle('hidden',name!=='overview');$('#moduleView').classList.toggle('hidden',name==='overview'||name==='settings');$('#settingsView').classList.toggle('hidden',name!=='settings');
+  currentView=name;if(name==='overview'||name==='settings')return;
   const config=viewConfig[name];$('#moduleEyebrow').textContent=config.eyebrow;$('#moduleTitle').textContent=config.title;$('#moduleSubtitle').textContent=config.subtitle;
   $('#moduleSearch').value='';sortKey='name';sortDirection=1;window.scrollTo({top:0,behavior:'smooth'});await loadModule();
 }
@@ -87,4 +87,5 @@ async function loadOverview(){
 function formatTimeLeft(days){if(days===undefined||days===null)return '—';if(days<0)return `${Math.abs(days)} days overdue`;if(days<31)return `${days} days`;const months=Math.floor(days/30);return `${months} mo ${days%30} days`;}
 function formatMoney(value,currency){return value?`${safe(currency||'USD')} ${Number(value).toLocaleString()}`:'—';}
 $('#refreshDashboard').onclick=loadOverview;
+$('#checkDatabase').onclick=async event=>{const button=event.currentTarget,result=$('#databaseHealth');button.disabled=true;button.textContent='Checking…';result.className='health-result checking';result.textContent='Connecting and verifying required tables…';try{const response=await fetch('database-health.php',{method:'POST',headers:{'X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content}});const payload=await response.json();if(!response.ok||!payload.healthy)throw new Error(payload.message||'Database check failed.');result.className='health-result healthy';result.textContent=payload.message;loadOverview();}catch(error){result.className='health-result unhealthy';result.textContent=error.message||'Database check failed.';}finally{button.disabled=false;button.textContent='Check and repair';}};
 loadOverview();

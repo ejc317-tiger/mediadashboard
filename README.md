@@ -8,6 +8,8 @@
 
 On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
 
+Authenticated users can also open **Settings** and select **Check and repair**. The CSRF-protected health check verifies the MySQL connection and all required tables; the normal connection installer restores missing tables before reporting success.
+
 If the server returns HTTP 403, confirm the upload directory is web-accessible and that Apache honors the included `.htaccess`. The dashboard must be opened through `index.php`, not by browsing `schema.sql` or another protected support file.
 
 All dashboard records are loaded through `api.php`; the browser bundle contains no embedded company dataset. The API uses PDO prepared statements for filters and a strict allowlist for table, column, and sort identifiers.

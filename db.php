@@ -67,6 +67,12 @@ function installSchema(PDO $connection): void
 /** Confirm that every table used by the dashboard is present in this database. */
 function requiredTablesExist(PDO $connection): bool
 {
+    return missingRequiredTables($connection) === [];
+}
+
+/** Return the application tables that are absent from the selected database. */
+function missingRequiredTables(PDO $connection): array
+{
     $requiredTables = [
         'users',
         'ai_update_runs',
@@ -81,7 +87,8 @@ function requiredTablesExist(PDO $connection): bool
         'data_centers',
     ];
     $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
-    $statement = $connection->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders)");
+    $statement = $connection->prepare("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders)");
     $statement->execute($requiredTables);
-    return (int) $statement->fetchColumn() === count($requiredTables);
+    $existingTables = $statement->fetchAll(PDO::FETCH_COLUMN);
+    return array_values(array_diff($requiredTables, $existingTables));
 }
