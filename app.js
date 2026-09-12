@@ -71,7 +71,7 @@ $('#dialogForm').addEventListener('submit',async event=>{event.preventDefault();
 function showToast(message){const toast=$('#toast');toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),3200);}
 document.querySelectorAll('.suggestions button').forEach(button=>button.onclick=()=>{$('#aiInput').value=button.textContent;$('#aiInput').focus();});
 async function loadOverview(){
-  const resources=[['allcompanies','allCount'],['pefirms','peFirmCount'],['vcfirms','vcFirmCount'],['aicompanies','aiCount'],['datacenters','dcCount'],['spacs','spacCount']];
+  const resources=[['allcompanies','allCount','companies'],['pefirms','peFirmCount','private equity'],['vcfirms','vcFirmCount','venture capital'],['aicompanies','aiCount','AI companies'],['datacenters','dcCount','data centers'],['spacs','spacCount','SPACs']];
   const results=await Promise.allSettled(resources.map(([resource])=>request(resource,{sort:'as_of_date',direction:'desc'})));
   results.forEach((result,index)=>{if(result.status==='fulfilled')$(`#${resources[index][1]}`).textContent=result.value.stats.total||0;});
   const ai=results[3].status==='fulfilled'?results[3].value.records:[];
@@ -81,7 +81,8 @@ async function loadOverview(){
   $('#mapPins').innerHTML=dc.filter(record=>record.latitude&&record.longitude).map(record=>`<button class="pin" style="left:${(Number(record.longitude)+180)/360*100}%;top:${(90-Number(record.latitude))/180*100}%" title="${safe(record.name)}"><i></i></button>`).join('');
   const spacs=results[5].status==='fulfilled'?results[5].value.records:[];spacs.forEach(record=>record.timeLeft=formatTimeLeft(record.time_left_days));$('#spacRows').innerHTML=spacs.slice(0,3).map(record=>`<div class="deadline"><div class="deadline-date">${record.raised_date?new Date(record.raised_date+'T00:00:00Z').getUTCFullYear():'—'}<b>IPO</b></div><div><strong>${safe(record.name)}</strong><small>${safe(record.sponsor)} · ${formatMoney(record.ipo_size,record.currency)}</small></div><span>${safe(record.timeLeft)}</span></div>`).join('')||'<div class="loading-row">No SPACs in the database.</div>';
   const companies=results[0].status==='fulfilled'?results[0].value.records:[];const activity=[...companies,...dc].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,4);$('#activityRows').innerHTML=activity.map(record=>`<div class="activity"><span class="activity-icon funding">◆</span><div><strong>${safe(record.name)}</strong><p>${safe(record.sector||record.category)} · Database update</p></div><div class="activity-right"><small>${displayDate(record.date)}</small></div></div>`).join('')||'<div class="loading-row">No database activity yet.</div>';
-  $('#syncLabel').textContent=results.every(result=>result.status==='fulfilled')?'Live database connected':'Some databases are unavailable';
+  const failures=results.map((result,index)=>result.status==='rejected'?{label:resources[index][2],reason:result.reason?.message||'Request failed'}:null).filter(Boolean);
+  const syncLabel=$('#syncLabel');syncLabel.textContent=failures.length?`Unavailable: ${failures.map(failure=>failure.label).join(', ')}`:'Live database connected';syncLabel.title=failures.map(failure=>`${failure.label}: ${failure.reason}`).join('\n');
 }
 function formatTimeLeft(days){if(days===undefined||days===null)return '—';if(days<0)return `${Math.abs(days)} days overdue`;if(days<31)return `${days} days`;const months=Math.floor(days/30);return `${months} mo ${days%30} days`;}
 function formatMoney(value,currency){return value?`${safe(currency||'USD')} ${Number(value).toLocaleString()}`:'—';}
