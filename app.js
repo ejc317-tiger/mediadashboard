@@ -1,0 +1,89 @@
+const viewConfig = {
+  allcompanies:{eyebrow:'COMPANY UNIVERSE',title:'All companies',subtitle:'Every tracked company with fund investors and latest financing information.',filterLabel:'All sectors',headers:[['name','Company'],['sector','Sector'],['fundInvestors','Fund investors'],['last_round_valuation','Last valuation'],['last_round_date','Last round date'],['date','As of']]},
+  pefirms:{eyebrow:'PRIVATE EQUITY',title:'Private equity firms',subtitle:'Technology, media, and telecom PE firms cross-linked to their owned companies.',filterLabel:'All strategies',headers:[['name','PE firm'],['strategy','Strategy'],['headquarters','Headquarters'],['portfolio_count','Owned companies']]},
+  vcfirms:{eyebrow:'VENTURE CAPITAL',title:'VC companies',subtitle:'Venture capital firms cross-linked to every tracked portfolio company.',filterLabel:'All firm types',headers:[['name','VC firm'],['category','Strategy'],['headquarters','Headquarters'],['portfolio_count','Portfolio companies']]},
+  aicompanies:{eyebrow:'ARTIFICIAL INTELLIGENCE',title:'AI companies',subtitle:'AI companies with investors, last round date, round size, and post-money valuation.',filterLabel:'All AI sectors',headers:[['name','Company'],['sector','AI sector'],['investorsLabel','Investors'],['last_round_date','Last round'],['last_round_size','Round size'],['last_round_valuation','Valuation']]},
+  datacenters:{eyebrow:'DIGITAL INFRASTRUCTURE',title:'Datacenter map',subtitle:'Live facility ownership, construction, power, tenants, financing, and coordinates.',filterLabel:'All regions',headers:[['name','Facility'],['location','Location'],['owner','Owner'],['power_mw','Power MW'],['tenant','Tenant'],['status','Status'],['date','As of']]},
+  spacs:{eyebrow:'CAPITAL MARKETS',title:'SPACs',subtitle:'Active SPACs with sponsor, IPO date, original size, deadline, and calculated time remaining.',filterLabel:'All statuses',headers:[['name','SPAC'],['sponsor','Sponsor'],['raised_date','Raised'],['ipo_size','SPAC size'],['deadline','Deadline'],['timeLeft','Time left'],['status','Status']]}
+};
+let currentView='overview', sortKey='name', sortDirection=1, sortTimer, records=[];
+const $=selector=>document.querySelector(selector);
+const fieldAliases={as_of_date:'date',source_name:'source',source_url:'sourceUrl',ipo_size:'size'};
+function normalize(record){const normalized=Object.fromEntries(Object.entries(record).map(([key,value])=>[fieldAliases[key]||key,value]));normalized.investorsLabel=(normalized.investors||[]).map(investor=>investor.name).join(', ')||'—';normalized.fundInvestors=[...(normalized.pe_owners||[]),...(normalized.investors||[])].map(fund=>fund.name).join(', ')||'—';if(normalized.time_left_days!==undefined)normalized.timeLeft=formatTimeLeft(Number(normalized.time_left_days));return normalized;}
+function safe(value){return String(value??'—').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function displayDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return value||'—';return new Date(value+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}
+async function request(resource, parameters={}){
+  const query=new URLSearchParams({resource,...parameters});
+  const response=await fetch(`api.php?${query}`);
+  const payload=await response.json();
+  if(!response.ok)throw new Error(payload.error||'Unable to load records.');
+  return {...payload,records:payload.records.map(normalize)};
+}
+async function openView(name){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
+  $('#pageCrumb').textContent=name==='overview'?'Overview':viewConfig[name].title;
+  $('#overviewView').classList.toggle('hidden',name!=='overview'); $('#moduleView').classList.toggle('hidden',name==='overview');
+  currentView=name;if(name==='overview')return;
+  const config=viewConfig[name];$('#moduleEyebrow').textContent=config.eyebrow;$('#moduleTitle').textContent=config.title;$('#moduleSubtitle').textContent=config.subtitle;
+  $('#moduleSearch').value='';sortKey='name';sortDirection=1;window.scrollTo({top:0,behavior:'smooth'});await loadModule();
+}
+async function loadModule(){
+  const config=viewConfig[currentView];
+  $('#moduleBody').innerHTML='<tr><td class="loading-row" colspan="8">Loading records…</td></tr>';
+  try{
+    const payload=await request(currentView,{search:$('#moduleSearch').value,category:$('#moduleFilter').value,sort:sortKey==='date'?'as_of_date':sortKey==='size'?'ipo_size':sortKey==='timeLeft'?'deadline':sortKey,direction:sortDirection===1?'asc':'desc'});
+    records=payload.records;
+    $('#moduleFilter').innerHTML=`<option value="all">${config.filterLabel}</option>`+payload.categories.map(category=>`<option ${category===$('#moduleFilter').value?'selected':''}>${safe(category)}</option>`).join('');
+    renderModule(payload.stats);
+  }catch(error){records=[];$('#moduleBody').innerHTML='';$('#emptyState').classList.remove('hidden');$('#emptyState').innerHTML=`<strong>Could not load data</strong><span>${safe(error.message)} Check the MySQL connection and run schema.sql.</span>`;}
+}
+function renderModule(stats){
+  const config=viewConfig[currentView];
+  $('#moduleHead').innerHTML=`<tr>${config.headers.map(([key,label])=>`<th><button data-sort="${key}">${label}<span>${sortKey===key?(sortDirection===1?'↑':'↓'):'↕'}</span></button></th>`).join('')}</tr>`;
+  $('#moduleBody').innerHTML=records.map(record=>`<tr data-record="${record.id}">${config.headers.map(([key],i)=>`<td class="${i===0?'company-cell ':''}${key==='status'?'status-cell':''}">${i===0?`<span class="company-logo">${safe(record.name[0])}</span>`:''}${key==='date'?displayDate(record[key]):safe(record[key])}</td>`).join('')}</tr>`).join('');
+  $('#resultCount').textContent=`${records.length} ${records.length===1?'record':'records'}`;$('#emptyState').classList.toggle('hidden',records.length>0);
+  const total=Number(stats.total||0),verified=Number(stats.verified||0),sync=stats.last_sync?new Date(stats.last_sync.replace(' ','T')+'Z').toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric'}):'Never';
+  $('#moduleStats').innerHTML=`<article><span>Records</span><strong>${total}</strong></article><article><span>Verified</span><strong>${verified}</strong></article><article><span>Needs review</span><strong>${total-verified}</strong></article><article><span>Last database update</span><strong>${sync}</strong></article>`;
+}
+function openDrawer(record){
+  $('#drawerType').textContent=viewConfig[currentView].eyebrow;
+  const funds=currentView==='allcompanies'?[...(record.pe_owners||[]),...(record.investors||[])]:record.investors||[];
+  const relationships=['vcfirms','pefirms'].includes(currentView)?(record.portfolio||[]).map(company=>`<li><span class="company-logo">${safe(company.name[0])}</span><div><strong>${safe(company.name)}</strong><small>${safe(company.sector)}${company.round_name?' · '+safe(company.round_name):''}</small></div></li>`).join(''):funds.map(investor=>`<li><span class="company-logo">${safe(investor.name[0])}</span><div><strong>${safe(investor.name)}</strong><small>${safe(investor.round_name||investor.ownership_notes||'Fund relationship')}${Number(investor.is_lead)?' · Lead investor':''}</small></div></li>`).join('');
+  const relationshipTitle=currentView==='pefirms'?'Owned companies':currentView==='vcfirms'?'Portfolio companies':'Fund investors';
+  $('#drawerContent').innerHTML=`<div class="drawer-title"><span class="company-logo large">${safe(record.name[0])}</span><div><h2>${safe(record.name)}</h2><p>${safe(record.category)}</p></div></div><p class="drawer-description">${safe(record.description)}</p><section class="relationship-card"><span>${relationshipTitle}</span><ul>${relationships||'<li class="no-relationships">No linked records yet</li>'}</ul></section><div class="research-grid">${Object.entries(record).filter(([key,value])=>!['id','name','category','description','sourceUrl','source','investorsLabel','portfolio_count'].includes(key)&&!Array.isArray(value)).map(([key,value])=>`<div><span>${safe(key.replace(/([A-Z])/g,' $1'))}</span><strong>${key==='date'?displayDate(value):safe(value)}</strong></div>`).join('')}</div><div class="source-card"><span>PRIMARY SOURCE</span><strong>${safe(record.source)}</strong><p>Open the linked disclosure and confirm all time-sensitive fields before relying on this record.</p><a href="${safe(record.sourceUrl)}" target="_blank" rel="noreferrer">Open source ↗</a></div>`;
+  $('#detailDrawer').classList.add('open');$('#drawerBackdrop').classList.add('open');$('#detailDrawer').setAttribute('aria-hidden','false');
+}
+function closeDrawer(){$('#detailDrawer').classList.remove('open');$('#drawerBackdrop').classList.remove('open');$('#detailDrawer').setAttribute('aria-hidden','true');}
+document.addEventListener('click',event=>{
+  const viewButton=event.target.closest('[data-view]');if(viewButton){openView(viewButton.dataset.view);return;}
+  const sortButton=event.target.closest('[data-sort]');if(sortButton){const key=sortButton.dataset.sort;sortDirection=sortKey===key?-sortDirection:1;sortKey=key;loadModule();return;}
+  const row=event.target.closest('[data-record]');if(row)openDrawer(records.find(record=>String(record.id)===row.dataset.record));
+});
+$('#moduleSearch').addEventListener('input',()=>{clearTimeout(sortTimer);sortTimer=setTimeout(loadModule,250);});$('#moduleFilter').addEventListener('change',loadModule);$('#closeDrawer').onclick=closeDrawer;$('#drawerBackdrop').onclick=closeDrawer;
+$('#dismissNotice').onclick=event=>event.currentTarget.parentElement.remove();
+$('#exportBtn').onclick=()=>{const config=viewConfig[currentView],csv=[config.headers.map(([,label])=>label),...records.map(record=>config.headers.map(([key])=>record[key]??''))].map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');const anchor=document.createElement('a');anchor.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));anchor.download=`northstar-${currentView}.csv`;anchor.click();URL.revokeObjectURL(anchor.href);};
+const dialog=$('#aiDialog');
+function openAiResearch(prefix=''){dialog.showModal();dialog.querySelector('textarea').value=prefix;dialog.querySelector('textarea').focus();}
+$('#addRecord').onclick=()=>openAiResearch(`Research and add records to the ${viewConfig[currentView].title} database: `);
+$('#addCompany').onclick=()=>openAiResearch('Research and add this company to the correct PE or AI company database: ');$('#askAi').onclick=()=>openAiResearch();$('#navAiResearch').onclick=()=>openAiResearch();$('.dialog-close').onclick=()=>dialog.close();
+$('#aiForm').addEventListener('submit',event=>{event.preventDefault();dialog.showModal();dialog.querySelector('textarea').value=$('#aiInput').value;dialog.querySelector('textarea').focus();});
+$('#dialogForm').addEventListener('submit',async event=>{event.preventDefault();const button=event.currentTarget.querySelector('button');button.disabled=true;button.textContent='Researching…';try{const response=await fetch('ai-update.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content},body:JSON.stringify({prompt:event.currentTarget.querySelector('textarea').value})});const result=await response.json();if(!response.ok)throw new Error(result.error);dialog.close();showToast(`Database updated: ${result.updated} records written.`);loadOverview();if(currentView!=='overview')loadModule();}catch(error){showToast(error.message||'AI update failed.');}finally{button.disabled=false;button.textContent='Research and update →';}});
+function showToast(message){const toast=$('#toast');toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),3200);}
+document.querySelectorAll('.suggestions button').forEach(button=>button.onclick=()=>{$('#aiInput').value=button.textContent;$('#aiInput').focus();});
+async function loadOverview(){
+  const resources=[['allcompanies','allCount'],['pefirms','peFirmCount'],['vcfirms','vcFirmCount'],['aicompanies','aiCount'],['datacenters','dcCount'],['spacs','spacCount']];
+  const results=await Promise.allSettled(resources.map(([resource])=>request(resource,{sort:'as_of_date',direction:'desc'})));
+  results.forEach((result,index)=>{if(result.status==='fulfilled')$(`#${resources[index][1]}`).textContent=result.value.stats.total||0;});
+  const ai=results[3].status==='fulfilled'?results[3].value.records:[];
+  $('#companyRows').innerHTML=ai.slice(0,4).map(raw=>{const record=normalize(raw);return `<tr><td class="company-cell"><span class="company-logo">${safe(record.name[0])}</span>${safe(record.name)}</td><td>${safe(record.sector)}</td><td>${safe(record.investorsLabel)}</td><td>${formatMoney(record.last_round_valuation,record.valuation_currency)}</td></tr>`;}).join('')||'<tr><td colspan="4">No AI companies yet. Use AI Research to add sourced records.</td></tr>';
+  const dc=results[4].status==='fulfilled'?results[4].value.records:[];const regions={};dc.forEach(record=>{regions[record.category]=(regions[record.category]||0)+Number(record.power_mw||0);});
+  $('#regionRows').innerHTML=Object.entries(regions).map(([region,mw])=>`<div><i class="dot-purple"></i><span>${safe(region)}</span><strong>${mw.toLocaleString()} MW</strong></div>`).join('')||'<div><span>No facilities in the database</span><strong>0 MW</strong></div>';
+  $('#mapPins').innerHTML=dc.filter(record=>record.latitude&&record.longitude).map(record=>`<button class="pin" style="left:${(Number(record.longitude)+180)/360*100}%;top:${(90-Number(record.latitude))/180*100}%" title="${safe(record.name)}"><i></i></button>`).join('');
+  const spacs=results[5].status==='fulfilled'?results[5].value.records:[];spacs.forEach(record=>record.timeLeft=formatTimeLeft(record.time_left_days));$('#spacRows').innerHTML=spacs.slice(0,3).map(record=>`<div class="deadline"><div class="deadline-date">${record.raised_date?new Date(record.raised_date+'T00:00:00Z').getUTCFullYear():'—'}<b>IPO</b></div><div><strong>${safe(record.name)}</strong><small>${safe(record.sponsor)} · ${formatMoney(record.ipo_size,record.currency)}</small></div><span>${safe(record.timeLeft)}</span></div>`).join('')||'<div class="loading-row">No SPACs in the database.</div>';
+  const companies=results[0].status==='fulfilled'?results[0].value.records:[];const activity=[...companies,...dc].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,4);$('#activityRows').innerHTML=activity.map(record=>`<div class="activity"><span class="activity-icon funding">◆</span><div><strong>${safe(record.name)}</strong><p>${safe(record.sector||record.category)} · Database update</p></div><div class="activity-right"><small>${displayDate(record.date)}</small></div></div>`).join('')||'<div class="loading-row">No database activity yet.</div>';
+  $('#syncLabel').textContent=results.every(result=>result.status==='fulfilled')?'Live database connected':'Some databases are unavailable';
+}
+function formatTimeLeft(days){if(days===undefined||days===null)return '—';if(days<0)return `${Math.abs(days)} days overdue`;if(days<31)return `${days} days`;const months=Math.floor(days/30);return `${months} mo ${days%30} days`;}
+function formatMoney(value,currency){return value?`${safe(currency||'USD')} ${Number(value).toLocaleString()}`:'—';}
+$('#refreshDashboard').onclick=loadOverview;
+loadOverview();
