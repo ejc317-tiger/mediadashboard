@@ -16,7 +16,7 @@ Companies live in one canonical `companies` table so every relationship points t
 
 ## Authentication and AI updates
 
-The first visit to `login.php` creates the initial administrator with a securely hashed password. Subsequent visitors must authenticate. Set `OPENAI_API_KEY` on the PHP server to enable **Research and update**; optionally set `OPENAI_MODEL`. The AI endpoint only accepts sourced records with valid public URLs, writes through allowlisted table/column mappings in a transaction, and marks every result `Review` for analyst verification.
+The first visit to `login.php` creates the initial administrator with a securely hashed password. Subsequent visitors must authenticate. Set `OPENAI_API_KEY` on the PHP server to enable **Research and update**, or copy `config.php.example` to the gitignored `config.php` and set `openai_api_key`; optionally set `OPENAI_MODEL`. Environment configuration takes precedence. The AI endpoint only accepts sourced records with valid public URLs, writes through allowlisted table/column mappings in a transaction, and marks every result `Review` for analyst verification.
 
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
 

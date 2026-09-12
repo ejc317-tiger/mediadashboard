@@ -3,7 +3,8 @@ declare(strict_types=1);require __DIR__.'/auth.php';require __DIR__.'/finance-so
 try {
  verifyCsrf($_SERVER['HTTP_X_CSRF_TOKEN']??'');$input=json_decode(file_get_contents('php://input'),true,512,JSON_THROW_ON_ERROR);$prompt=trim($input['prompt']??'');
  if(strlen($prompt)<10)throw new RuntimeException('Please provide a more specific research request.');
- $key=getenv('OPENAI_API_KEY');if(!$key)throw new RuntimeException('OPENAI_API_KEY is not configured on the server.');
+ $siteConfig=is_file(__DIR__.'/config.php')?require __DIR__.'/config.php':[];
+ $key=getenv('OPENAI_API_KEY')?:($siteConfig['openai_api_key']??'');if(!$key)throw new RuntimeException('OPENAI_API_KEY is not configured on the server.');
  $licensed=queryFinanceSources($prompt);$licensedContext=$licensed?"\nLicensed database results supplied by the server:\n".json_encode($licensed,JSON_THROW_ON_ERROR):'';
  $instructions='Use web search and the supplied licensed finance-database results. Prioritize SEC and regulatory filings, company and investor disclosures, licensed PitchBook and Crunchbase data, other licensed finance databases, then reputable search results. Cross-check material facts. Never invent or estimate undisclosed values. Every record must contain source_name, a valid source_url, and as_of_date. Return one JSON object with a records array. Each record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and a data object. For investments data must include company_name, vc_firm_name, round_name, announced_date, amount, currency and source_url. For ownership data must include company_name, pe_firm_name, acquired_date and source_url. Use null for undisclosed facts.';
  $payload=['model'=>getenv('OPENAI_MODEL')?:'gpt-5-mini','instructions'=>$instructions,'input'=>$prompt.$licensedContext,'tools'=>[['type'=>'web_search']],'text'=>['format'=>['type'=>'json_object']]];
