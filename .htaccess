@@ -1,0 +1,18 @@
+DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# PHP includes, credentials, installation SQL, and repository metadata must
+# never be served directly. They remain available to PHP via the filesystem.
+<FilesMatch "^(db\.php|auth\.php|finance-sources\.php|config\.php|config\.php\.example|schema\.sql|README\.md|\.env)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
