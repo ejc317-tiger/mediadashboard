@@ -8,7 +8,7 @@
 
 On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
 
-Authenticated users can also open **Settings** and select **Check and repair**. The CSRF-protected health check connects without running the installer first, records which tables are missing, applies the schema, verifies the result, and reports exactly which tables were repaired.
+Authenticated users can open **Settings** from the top-right application header and select **Check and repair**. The CSRF-protected health check connects without running the installer first, records which tables are missing, applies the schema, verifies the result, and reports exactly which tables were repaired.
 
 The repair also checks every column required by runtime queries and adds missing columns to older installations without deleting existing records. Settings includes a password-style API-key form; its CSRF-protected endpoint writes the key to the gitignored `.openai-api-key` file with owner-only permissions. Apache is explicitly configured to deny HTTP access to this file.
 

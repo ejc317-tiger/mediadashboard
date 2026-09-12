@@ -35,7 +35,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <p class="nav-label second">Intelligence</p>
       <button class="nav-item" data-view="research"><span class="icon">✦</span>Company research</button>
       <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
-      <button class="nav-item" data-view="settings"><span class="icon">⚙</span>Settings</button>
     </nav>
     <div class="sidebar-foot">
       <button class="help"><span>?</span>Help center</button>
@@ -47,7 +46,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <header class="topbar">
       <div class="crumb"><span>Northstar</span><b>/</b><strong id="pageCrumb">Overview</strong></div>
       <div class="top-actions">
-        <button class="icon-btn" aria-label="Notifications">♢<i></i></button>
+        <button class="settings-link" data-view="settings" aria-label="Open settings"><span>⚙</span> Settings</button>
         <button class="outline" id="addCompany">＋ Add company</button>
         <button class="primary" id="askAi">✦ Ask Northstar AI</button>
       </div>
@@ -108,9 +107,19 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     </section>
 
     <section class="content settings-view hidden" id="settingsView">
-      <p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Check server services and repair recoverable configuration issues.</p>
-      <section class="panel settings-panel"><div><h2>Database connection</h2><p>Connect to MySQL, verify every required dashboard table, and automatically restore missing tables from the bundled schema.</p></div><button class="primary" id="checkDatabase">Check and repair</button><div class="health-result" id="databaseHealth" role="status">Not checked yet.</div></section>
-      <section class="panel settings-panel"><div><h2>OpenAI API key</h2><p>Replace the server-side key used for company research. The saved value is never returned to the browser.</p></div><form class="key-form" id="apiKeyForm"><input type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" aria-label="New OpenAI API key" required><button class="primary">Save key</button></form><div class="health-result" id="apiKeyResult" role="status">Enter a new key to replace the current setting.</div></section>
+      <div class="settings-heading"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Manage the services that power your workspace.</p></div><button class="back" data-view="overview">← Back to overview</button></div>
+      <div class="settings-grid">
+        <section class="panel settings-panel">
+          <div class="settings-card-head"><span class="settings-card-icon database-icon">▤</span><div><h2>Database</h2><p>Verify the connection, required tables, and runtime columns.</p></div></div>
+          <div class="settings-action"><div><strong>Database structure</strong><small>Missing tables and columns will be restored without removing existing records.</small></div><button class="primary" id="checkDatabase">Check and repair</button></div>
+          <div class="health-result neutral" id="databaseHealth" role="status"><span class="status-dot"></span><div><strong>Not checked</strong><small>Run a check to see the current database status.</small></div></div>
+        </section>
+        <section class="panel settings-panel">
+          <div class="settings-card-head"><span class="settings-card-icon key-icon">⌁</span><div><h2>OpenAI integration</h2><p>Manage the credential used for company and investor research.</p></div></div>
+          <form class="key-form" id="apiKeyForm"><label for="apiKeyInput">New API key</label><div><input id="apiKeyInput" type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" required><button class="primary">Save key</button></div><small>The existing key is never sent to your browser.</small></form>
+          <div class="health-result neutral" id="apiKeyResult" role="status"><span class="status-dot"></span><div><strong>Ready to update</strong><small>Enter a new key above to replace the current credential.</small></div></div>
+        </section>
+      </div>
     </section>
 
     <section class="content research-view hidden" id="researchView">
