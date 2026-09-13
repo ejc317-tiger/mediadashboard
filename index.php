@@ -114,7 +114,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
         </section>
         <section class="panel settings-panel">
           <div class="settings-card-head"><span class="settings-card-icon key-icon">⌁</span><div><h2>OpenAI integration</h2><p>Manage the credential used for company and investor research.</p></div></div>
-          <form class="key-form" id="apiKeyForm"><label for="apiKeyInput">New API key</label><div><input id="apiKeyInput" type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" required><button class="primary">Save key</button></div><small>The existing key is never sent to your browser.</small></form>
+          <form class="key-form" id="apiKeyForm"><label for="apiKeyInput">New API key</label><div><input id="apiKeyInput" type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" required><button class="primary">Save to database</button></div><small>The key is encrypted before it is stored and is never returned to your browser.</small></form>
           <div class="health-result neutral" id="apiKeyResult" role="status"><span class="status-dot"></span><div><strong>Ready to update</strong><small>Enter a new key above to replace the current credential.</small></div></div>
         </section>
       </div>

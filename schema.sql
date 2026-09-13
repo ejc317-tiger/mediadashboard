@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS data_sources (
  source_type ENUM('Web search','Licensed database','Regulatory','Company disclosure') NOT NULL,
  enabled BOOLEAN NOT NULL DEFAULT TRUE, last_success_at TIMESTAMP NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS app_settings (
+ setting_key VARCHAR(100) PRIMARY KEY, setting_value TEXT NOT NULL,
+ updated_by BIGINT UNSIGNED NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
 INSERT INTO data_sources(name,source_type) VALUES
  ('Web search','Web search'),('PitchBook','Licensed database'),('Crunchbase','Licensed database'),
  ('SEC EDGAR','Regulatory'),('Company and investor disclosures','Company disclosure'),('Additional finance databases','Licensed database')

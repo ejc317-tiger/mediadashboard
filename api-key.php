@@ -13,8 +13,8 @@ try {
     }
     verifyCsrf($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     $input = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
-    saveOpenAiApiKey((string) ($input['api_key'] ?? ''));
-    echo json_encode(['saved' => true, 'message' => 'API key saved securely. Future research requests will use it.'], JSON_THROW_ON_ERROR);
+    saveOpenAiApiKey((string) ($input['api_key'] ?? ''), (int) $_SESSION['user_id']);
+    echo json_encode(['saved' => true, 'message' => 'API key encrypted and saved to the database. Future research requests will use it.'], JSON_THROW_ON_ERROR);
 } catch (Throwable $exception) {
     http_response_code(http_response_code() >= 400 ? http_response_code() : 400);
     echo json_encode(['saved' => false, 'error' => $exception->getMessage()], JSON_THROW_ON_ERROR);

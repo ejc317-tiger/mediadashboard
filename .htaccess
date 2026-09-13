@@ -7,7 +7,7 @@ Options -Indexes
 
 # PHP includes, credentials, installation SQL, and repository metadata must
 # never be served directly. They remain available to PHP via the filesystem.
-<FilesMatch "^(db\.php|auth\.php|finance-sources\.php|secret-config\.php|config\.php|config\.php\.example|schema\.sql|README\.md|\.env|\.openai-api-key)$">
+<FilesMatch "^(db\.php|auth\.php|finance-sources\.php|secret-config\.php|config\.php|config\.php\.example|schema\.sql|README\.md|\.env|\.openai-api-key|\.app-encryption-key)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
