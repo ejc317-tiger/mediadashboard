@@ -14,15 +14,23 @@ function jsonResponse(array $payload, int $status = 200): never
     exit;
 }
 
-function callResearchService(string $prompt, string $key, array $licensed): array
+function callResearchService(string $prompt, string $key, array $licensed, string $depth = 'deep', int $maximumRecords = 15): array
 {
+    $depthInstructions = [
+        'standard' => 'Run a focused search and verify each material fact with the strongest available source.',
+        'deep' => 'Run an in-depth investigation. Search broadly, cross-check material facts across multiple independent sources, inspect company and investor disclosures, and identify all clearly supported financing and ownership relationships.',
+        'exhaustive' => 'Run an exhaustive investigation. Search iteratively across regulatory filings, company announcements, investor portfolio pages, and reputable reporting. Reconcile conflicts, prefer primary sources, and capture every clearly supported entity and relationship up to the record limit.',
+    ];
+    $depth = array_key_exists($depth, $depthInstructions) ? $depth : 'deep';
+    $maximumRecords = max(1, min(50, $maximumRecords));
     $licensedContext = $licensed ? "\nLicensed database results supplied by the server:\n" . json_encode($licensed, JSON_THROW_ON_ERROR) : '';
-    $instructions = 'Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Cross-check material facts. Never invent undisclosed values. Return only one valid JSON object with a records array, without Markdown fences or commentary. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Every record must contain a valid public source_url in data and an as_of_date where applicable. Investment data includes company_name, vc_firm_name, round_name, announced_date, amount, currency, is_lead, and source_url. Ownership data includes company_name, pe_firm_name, acquired_date, exited_date, ownership_notes, and source_url. Use null for undisclosed facts.';
+    $instructions = $depthInstructions[$depth] . " Return no more than $maximumRecords database records. " . 'Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Return only one valid JSON object with a records array, without Markdown fences or commentary. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Every record must contain a valid public source_url in data and an as_of_date where applicable. Include entity records for companies and firms before their relationship records. Investment data includes company_name, vc_firm_name, round_name, announced_date, amount, currency, is_lead, and source_url. Ownership data includes company_name, pe_firm_name, acquired_date, exited_date, ownership_notes, and source_url. Use null for undisclosed facts.';
     $payload = [
         'model' => getenv('OPENAI_MODEL') ?: 'gpt-5-mini',
         'instructions' => $instructions,
         'input' => $prompt . $licensedContext,
         'tools' => [['type' => 'web_search']],
+        'max_output_tokens' => $depth === 'exhaustive' ? 24000 : ($depth === 'deep' ? 16000 : 8000),
     ];
     $ch = curl_init('https://api.openai.com/v1/responses');
     curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_TIMEOUT => 120]);
@@ -38,7 +46,10 @@ function callResearchService(string $prompt, string $key, array $licensed): arra
     }
     $text = (string) ($response['output_text'] ?? '');
     if ($text === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (($content['type'] ?? '') === 'output_text' || isset($content['text'])) $text .= (string) ($content['text'] ?? '');
-    if ($text === '') throw new RuntimeException('AI service returned no research results.');
+    if ($text === '') {
+        $reason = (string) ($response['incomplete_details']['reason'] ?? 'No output text was returned.');
+        throw new RuntimeException('AI service returned no research results: ' . $reason);
+    }
     $result = decodeResearchResult($text);
     if (!isset($result['records']) || !is_array($result['records'])) throw new RuntimeException('AI service returned an invalid records response.');
     return $result;
@@ -162,8 +173,10 @@ try {
     $siteConfig = is_file(__DIR__ . '/config.php') ? require __DIR__ . '/config.php' : [];
     $key = openAiApiKey(is_array($siteConfig) ? $siteConfig : []);
     if (!$key) throw new RuntimeException('OPENAI_API_KEY is not configured. Open Settings in the top-right and save an API key.');
+    $depth = (string) ($input['depth'] ?? 'deep');
+    $maximumRecords = (int) ($input['maximum_records'] ?? 15);
     $licensed = queryFinanceSources($prompt);
-    $result = callResearchService($prompt, $key, $licensed);
+    $result = callResearchService($prompt, $key, $licensed, $depth, $maximumRecords);
     $preview = previewRecords($result['records']);
     if ($preview === []) throw new RuntimeException('Research completed, but no sourced records were returned. Nothing was added.');
     $token = bin2hex(random_bytes(24));

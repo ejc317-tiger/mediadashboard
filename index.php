@@ -15,7 +15,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <aside class="sidebar">
@@ -122,7 +122,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
 
     <section class="content research-view hidden" id="researchView">
       <p class="eyebrow">COMPANY &amp; INVESTOR INTELLIGENCE</p><h1>Company research</h1><p class="subtitle">Research a company or investment firm using public sources, then add the sourced result to the appropriate database.</p>
-      <section class="panel research-panel"><form id="researchForm"><label>Research target<select id="researchType"><option value="company">Company</option><option value="investor">Investor (VC or private equity)</option></select></label><label>Name or research question<input id="researchQuery" required placeholder="e.g. Research Acme AI, its latest round and investors"></label><button class="primary">Research and preview →</button></form><div class="health-result" id="researchResult" role="status">No research run yet. Research results will be shown here for confirmation before anything is saved.</div></section>
+      <section class="panel research-panel"><form id="researchForm"><label>Research target<select id="researchType"><option value="company">Company or market</option><option value="investor">Investor (VC or private equity)</option></select></label><label>Detailed research request<textarea id="researchQuery" required placeholder="Example: Build a comprehensive list of US AI infrastructure companies funded since 2024. Include each company, round dates and sizes, valuations when disclosed, VC investors, PE owners, headquarters, and primary source URLs."></textarea></label><div class="research-options"><label>Research depth<select id="researchDepth"><option value="deep">Deep</option><option value="exhaustive">Exhaustive</option><option value="standard">Standard</option></select></label><label>Maximum records<select id="researchMaximum"><option value="15">15 records</option><option value="30">30 records</option><option value="50">50 records</option><option value="5">5 records</option></select></label></div><button class="primary">Run research and preview →</button></form><div class="health-result" id="researchResult" role="status">Describe a company, investor, sector, geography, or investment theme. Results will be shown for confirmation before anything is saved.</div></section>
     </section>
   </main>
 
@@ -130,6 +130,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
