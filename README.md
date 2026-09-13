@@ -2,7 +2,7 @@
 
 ## Local setup
 
-1. Configure `DB_NAME`, `DB_USER`, and `DB_PASSWORD` on the server. Set `DB_HOST` and `DB_PORT` when MySQL is not available through `localhost:3306`. For local-only development, the same values may be placed in an untracked `config.php` based on `config.php.example`.
+1. Configure `DB_NAME`, `DB_USER`, and `DB_PASSWORD` on the server. Set `DB_HOST` and `DB_PORT` when MySQL is not available through `localhost:3306`. Alternatively, open the site and use the initial **Connect database** screen; it tests the connection and writes the values to an untracked, owner-readable `config.php` file.
 2. Start PHP: `php -S 127.0.0.1:4173`.
 3. Open `http://127.0.0.1:4173`.
 
