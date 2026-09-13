@@ -17,13 +17,12 @@ function jsonResponse(array $payload, int $status = 200): never
 function callResearchService(string $prompt, string $key, array $licensed): array
 {
     $licensedContext = $licensed ? "\nLicensed database results supplied by the server:\n" . json_encode($licensed, JSON_THROW_ON_ERROR) : '';
-    $instructions = 'Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Cross-check material facts. Never invent undisclosed values. Return one JSON object with a records array. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Every record must contain a valid public source_url in data and an as_of_date where applicable. Investment data includes company_name, vc_firm_name, round_name, announced_date, amount, currency, is_lead, and source_url. Ownership data includes company_name, pe_firm_name, acquired_date, exited_date, ownership_notes, and source_url. Use null for undisclosed facts.';
+    $instructions = 'Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Cross-check material facts. Never invent undisclosed values. Return only one valid JSON object with a records array, without Markdown fences or commentary. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Every record must contain a valid public source_url in data and an as_of_date where applicable. Investment data includes company_name, vc_firm_name, round_name, announced_date, amount, currency, is_lead, and source_url. Ownership data includes company_name, pe_firm_name, acquired_date, exited_date, ownership_notes, and source_url. Use null for undisclosed facts.';
     $payload = [
         'model' => getenv('OPENAI_MODEL') ?: 'gpt-5-mini',
         'instructions' => $instructions,
         'input' => $prompt . $licensedContext,
         'tools' => [['type' => 'web_search']],
-        'text' => ['format' => ['type' => 'json_object']],
     ];
     $ch = curl_init('https://api.openai.com/v1/responses');
     curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_TIMEOUT => 120]);
@@ -40,9 +39,30 @@ function callResearchService(string $prompt, string $key, array $licensed): arra
     $text = (string) ($response['output_text'] ?? '');
     if ($text === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (($content['type'] ?? '') === 'output_text' || isset($content['text'])) $text .= (string) ($content['text'] ?? '');
     if ($text === '') throw new RuntimeException('AI service returned no research results.');
-    $result = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+    $result = decodeResearchResult($text);
     if (!isset($result['records']) || !is_array($result['records'])) throw new RuntimeException('AI service returned an invalid records response.');
     return $result;
+}
+
+/** Decode JSON requested through instructions because web search cannot be combined with JSON mode. */
+function decodeResearchResult(string $text): array
+{
+    $candidate = trim($text);
+    if (preg_match('/^```(?:json)?\s*(.*?)\s*```$/is', $candidate, $match)) $candidate = trim($match[1]);
+    try {
+        $decoded = json_decode($candidate, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        $start = strpos($candidate, '{');
+        $end = strrpos($candidate, '}');
+        if ($start === false || $end === false || $end <= $start) throw new RuntimeException('AI service returned research in an unreadable format.', 0, $exception);
+        try {
+            $decoded = json_decode(substr($candidate, $start, $end - $start + 1), true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $nestedException) {
+            throw new RuntimeException('AI service returned research in an unreadable format.', 0, $nestedException);
+        }
+    }
+    if (!is_array($decoded)) throw new RuntimeException('AI service returned research in an unreadable format.');
+    return $decoded;
 }
 
 function previewRecords(array $records): array

@@ -24,6 +24,8 @@ The first visit to `login.php` creates the initial administrator with a securely
 
 The **Company research** tab accepts either a company or investor target. It asks the research service to identify the correct company, VC, or private-equity tables and returns a sourced preview without writing to MySQL. The analyst must review the proposed records and explicitly select **Confirm and add** before supported portfolio or financing relationships are saved; all written results remain marked for review.
 
+Research uses web search without Responses API JSON mode because those features cannot be combined. The model is instructed to return JSON, and the server validates and decodes that response before creating a preview.
+
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
 
 ## Research data sources
