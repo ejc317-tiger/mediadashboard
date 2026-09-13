@@ -15,12 +15,19 @@ function database(bool $install = true): PDO
 
     $fileConfig = file_exists(__DIR__ . '/config.php') ? require __DIR__ . '/config.php' : [];
     $config = array_merge([
-        'host' => getenv('DB_HOST') ?: 'localhost',
-        'port' => getenv('DB_PORT') ?: '3306',
+        'host' => 'localhost',
+        'port' => '3306',
+        'database' => '',
+        'username' => '',
+        'password' => '',
     ], is_array($fileConfig) ? $fileConfig : []);
-    $config['database'] = 'rive4320_ibd';
-    $config['username'] = 'rive4320_ibd';
-    $config['password'] = 'rive4320_IBD$$';
+    foreach (['DB_HOST'=>'host','DB_PORT'=>'port','DB_NAME'=>'database','DB_USER'=>'username','DB_PASSWORD'=>'password'] as $variable => $field) {
+        $value = getenv($variable);
+        if ($value !== false && $value !== '') $config[$field] = $value;
+    }
+    foreach (['database' => 'DB_NAME', 'username' => 'DB_USER'] as $field => $variable) {
+        if (trim((string) $config[$field]) === '') throw new RuntimeException("Database configuration is incomplete. Set $variable on the server or provide '$field' in config.php.");
+    }
 
     $hosts = array_values(array_unique([$config['host'], 'localhost', '127.0.0.1']));
     $lastError = null;
@@ -38,7 +45,7 @@ function database(bool $install = true): PDO
         }
     }
     if (!$connection instanceof PDO) {
-        throw new RuntimeException('Unable to connect to MySQL database rive4320_ibd. Confirm the database exists and DB_HOST/DB_PORT are correct.', 0, $lastError);
+        throw new RuntimeException('Unable to connect to the configured MySQL database. Confirm DB_HOST, DB_PORT, DB_NAME, DB_USER, and DB_PASSWORD.', 0, $lastError);
     }
 
     if ($install) {

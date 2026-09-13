@@ -2,11 +2,11 @@
 
 ## Local setup
 
-1. The application uses the bundled MySQL database name, username, and password. Set `DB_HOST` and `DB_PORT` only when MySQL is not running at `127.0.0.1:3306`.
+1. Configure `DB_NAME`, `DB_USER`, and `DB_PASSWORD` on the server. Set `DB_HOST` and `DB_PORT` when MySQL is not available through `localhost:3306`. For local-only development, the same values may be placed in an untracked `config.php` based on `config.php.example`.
 2. Start PHP: `php -S 127.0.0.1:4173`.
 3. Open `http://127.0.0.1:4173`.
 
-On the first request, PHP connects to the existing `rive4320_ibd` database, automatically imports `schema.sql` and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
+On the first request, PHP connects to the configured database, automatically imports `schema.sql`, and creates the empty tables. On later requests—including the next login—the installer checks that every required dashboard table still exists and re-applies the idempotent schema when one is missing. Existing tables and records are preserved. The schema file remains deployed for recovery and each revision is tracked using its SHA-256 hash in `schema_migrations`. A filesystem lock prevents concurrent requests from running a migration twice. The configured MySQL user needs table-creation permission inside that database, but does not need server-wide database-creation permission.
 
 Authenticated users can open **Settings** from the top-right application header and select **Check and repair**. The CSRF-protected health check connects without running the installer first, records which tables are missing, applies the schema, verifies the result, and reports exactly which tables were repaired.
 
