@@ -10,7 +10,7 @@ On the first request, PHP connects to the configured database, automatically imp
 
 Authenticated users can open **Settings** from the top-right application header and select **Check and repair**. The CSRF-protected health check connects without running the installer first, records which tables are missing, applies the schema, verifies the result, and reports exactly which tables were repaired.
 
-The repair also checks every column required by runtime queries and adds missing columns to older installations without deleting existing records. Settings includes a password-style API-key form; its CSRF-protected endpoint encrypts the key and stores it in the `app_settings` database table. The separate encryption key is loaded from `APP_ENCRYPTION_KEY` or generated in the gitignored, HTTP-blocked `.app-encryption-key` file with owner-only permissions.
+The repair also checks every column required by runtime queries and adds missing columns to older installations without deleting existing records. Settings includes a password-style API-key form; its CSRF-protected endpoint encrypts the key and stores it in the `app_settings` database table. Whenever Settings opens—and immediately after a key is saved—the server verifies the configured credential with OpenAI and displays whether it is working without returning the key to the browser. The separate encryption key is loaded from `APP_ENCRYPTION_KEY` or generated in the gitignored, HTTP-blocked `.app-encryption-key` file with owner-only permissions.
 
 If the server returns HTTP 403, confirm the upload directory is web-accessible and that Apache honors the included `.htaccess`. The dashboard must be opened through `index.php`, not by browsing `schema.sql` or another protected support file.
 
