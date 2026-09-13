@@ -13,16 +13,20 @@ try {
     verifyCsrf($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     $connection = database(false);
     $missingBeforeRepair = missingRequiredTables($connection);
+    $missingColumnsBeforeRepair = missingRequiredColumns($connection);
     installSchema($connection);
     $missingAfterRepair = missingRequiredTables($connection);
-    if ($missingAfterRepair !== []) throw new RuntimeException('Schema repair did not restore: ' . implode(', ', $missingAfterRepair));
+    $missingColumnsAfterRepair = missingRequiredColumns($connection);
+    if ($missingAfterRepair !== [] || $missingColumnsAfterRepair !== []) throw new RuntimeException('Schema repair did not restore: ' . implode(', ', array_merge($missingAfterRepair, $missingColumnsAfterRepair)));
     $repaired = array_values(array_diff($missingBeforeRepair, $missingAfterRepair));
+    $repairedColumns = array_values(array_diff($missingColumnsBeforeRepair, $missingColumnsAfterRepair));
+    $repairs = array_merge($repaired, $repairedColumns);
     echo json_encode([
         'healthy' => true,
         'repaired' => $repaired,
-        'message' => $repaired === []
+        'message' => $repairs === []
             ? 'Database connected and all required tables are available.'
-            : 'Database connected and repaired: ' . implode(', ', $repaired) . '.',
+            : 'Database connected and repaired: ' . implode(', ', $repairs) . '.',
     ], JSON_THROW_ON_ERROR);
 } catch (Throwable $exception) {
     http_response_code(http_response_code() >= 400 ? http_response_code() : 500);

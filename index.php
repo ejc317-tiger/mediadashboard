@@ -15,7 +15,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <aside class="sidebar">
@@ -33,12 +33,9 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <button class="nav-item" data-view="datacenters"><span class="icon">⌖</span>Datacenter map</button>
       <button class="nav-item" data-view="spacs"><span class="icon">◎</span>SPACs</button>
       <p class="nav-label second">Intelligence</p>
-      <button class="nav-item" id="navAiResearch"><span class="icon">✦</span>AI Research</button>
-      <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
-      <button class="nav-item" data-view="settings"><span class="icon">⚙</span>Settings</button>
+      <button class="nav-item" data-view="research"><span class="icon">✦</span>Company research</button>
     </nav>
     <div class="sidebar-foot">
-      <button class="help"><span>?</span>Help center</button>
       <div class="profile"><div class="avatar"><?=htmlspecialchars(strtoupper(substr($displayName,0,2)))?></div><div><strong><?=htmlspecialchars($displayName)?></strong><small>Authenticated</small></div><a href="logout.php" title="Sign out">↪</a></div>
     </div>
   </aside>
@@ -47,7 +44,8 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <header class="topbar">
       <div class="crumb"><span>Northstar</span><b>/</b><strong id="pageCrumb">Overview</strong></div>
       <div class="top-actions">
-        <button class="icon-btn" aria-label="Notifications">♢<i></i></button>
+        <div class="connection-status" id="connectionStatus" title="Dashboard database status"><span class="connection-dot"></span><span id="syncLabel">Connecting…</span></div>
+        <button class="settings-link" data-view="settings" aria-label="Open settings"><span>⚙</span> Settings</button>
         <button class="outline" id="addCompany">＋ Add company</button>
         <button class="primary" id="askAi">✦ Ask Northstar AI</button>
       </div>
@@ -56,7 +54,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <section class="content" id="overviewView">
       <div class="welcome-row">
         <div><p class="eyebrow"><?=strtoupper(date('l, F j'))?></p><h1>Welcome, <?=htmlspecialchars($displayName)?>.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
-        <div class="updated"><span></span><span id="syncLabel">Connecting to database…</span></div>
       </div>
 
       <section class="ai-search">
@@ -67,7 +64,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       </section>
       <div class="data-notice"><span>ⓘ</span><p><strong>Live workspace</strong> — Database updates are source-gated and marked for review until an analyst verifies the linked disclosure.</p><button id="dismissNotice" aria-label="Dismiss">×</button></div>
 
-      <div class="section-head"><div><h2>Market pulse</h2><p>Key metrics across your tracked universe</p></div><select aria-label="Time period"><option>Last 30 days</option><option>Last quarter</option></select></div>
+      <div class="section-head"><div><h2>Market pulse</h2><p>Current totals across your tracked universe</p></div></div>
       <div class="metrics">
         <article class="metric clickable" data-view="allcompanies"><div class="metric-top"><span class="metric-icon purple">▦</span></div><strong id="allCount">—</strong><p>All companies</p><small>Open database →</small></article>
         <article class="metric clickable" data-view="pefirms"><div class="metric-top"><span class="metric-icon purple">◈</span></div><strong id="peFirmCount">—</strong><p>Private equity firms</p><small>Open ownership portfolios →</small></article>
@@ -84,7 +81,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
         </section>
 
         <section class="panel map-panel">
-          <div class="panel-head"><div><h2>Data center footprint</h2><p>Capacity by region</p></div><button class="dots">•••</button></div>
+          <div class="panel-head"><div><h2>Data center footprint</h2><p>Capacity by region</p></div></div>
           <div class="map" aria-label="Stylized map showing data center locations">
             <svg viewBox="0 0 650 310" role="img"><path d="M33 78l41-38 74-12 55 22 26 37-30 24-29 53-31 14-20-38-39-15-31-7zM166 186l38 20 23 53-25 44-25-44-16-43zM299 55l45-20 40 13 8 22 70-13 76 21 73 49-20 28-69 4-21 29-51-13-38 15-34-30-48-16-25-31-24-11zM382 181l45 4 34 38-4 64-47 13-31-56zM525 234l42-20 44 17 11 34-50 13-42-15z"/></svg>
             <div id="mapPins"></div>
@@ -108,15 +105,31 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     </section>
 
     <section class="content settings-view hidden" id="settingsView">
-      <p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Check server services and repair recoverable configuration issues.</p>
-      <section class="panel settings-panel"><div><h2>Database connection</h2><p>Connect to MySQL, verify every required dashboard table, and automatically restore missing tables from the bundled schema.</p></div><button class="primary" id="checkDatabase">Check and repair</button><div class="health-result" id="databaseHealth" role="status">Not checked yet.</div></section>
+      <div class="settings-heading"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>Settings</h1><p class="subtitle">Manage the services that power your workspace.</p></div><button class="back" data-view="overview">← Back to overview</button></div>
+      <div class="settings-grid">
+        <section class="panel settings-panel">
+          <div class="settings-card-head"><span class="settings-card-icon database-icon">▤</span><div><h2>Database</h2><p>Verify the connection, required tables, and runtime columns.</p></div></div>
+          <div class="settings-action"><div><strong>Database structure</strong><small>Missing tables and columns will be restored without removing existing records.</small></div><button class="primary" id="checkDatabase">Check and repair</button></div>
+          <div class="health-result neutral" id="databaseHealth" role="status"><span class="status-dot"></span><div><strong>Not checked</strong><small>Run a check to see the current database status.</small></div></div>
+        </section>
+        <section class="panel settings-panel">
+          <div class="settings-card-head"><span class="settings-card-icon key-icon">⌁</span><div><h2>OpenAI integration</h2><p>Manage the credential used for company and investor research.</p></div></div>
+          <form class="key-form" id="apiKeyForm"><label for="apiKeyInput">New API key</label><div><input id="apiKeyInput" type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" required><button class="primary">Save to database</button></div><small>The key is encrypted before it is stored and is never returned to your browser.</small></form>
+          <div class="health-result neutral" id="apiKeyResult" role="status"><span class="status-dot"></span><div><strong>Ready to update</strong><small>Enter a new key above to replace the current credential.</small></div></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="content research-view hidden" id="researchView">
+      <p class="eyebrow">COMPANY &amp; INVESTOR INTELLIGENCE</p><h1>Company research</h1><p class="subtitle">Research a company or investment firm using public sources, then add the sourced result to the appropriate database.</p>
+      <section class="panel research-panel"><form id="researchForm"><label>Research target<select id="researchType"><option value="company">Company</option><option value="investor">Investor (VC or private equity)</option></select></label><label>Name or research question<input id="researchQuery" required placeholder="e.g. Research Acme AI, its latest round and investors"></label><button class="primary">Research and preview →</button></form><div class="health-result" id="researchResult" role="status">No research run yet. Research results will be shown here for confirmation before anything is saved.</div></section>
     </section>
   </main>
 
-  <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Research & update databases</h2><p>Ask AI to research records. Verified structured results will be written to the appropriate database.</p><form id="dialogForm"><textarea placeholder="Example: Research AI legal software companies and add their latest investors and valuations." required></textarea><label class="confirm-update"><input type="checkbox" required> I understand this will update the live database.</label><button class="primary">Research and update →</button></form><small>Every inserted record must include a source URL and is marked for review.</small><div class="source-badges"><span>Web search</span><span>PitchBook</span><span>Crunchbase</span><span>SEC / filings</span><span>Finance databases</span></div></dialog>
+  <dialog id="aiDialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-spark">✦</span><h2>Research databases</h2><p>Research sourced records first. You will review and confirm the results before anything is added.</p><form id="dialogForm"><textarea placeholder="Example: Research AI legal software companies and their latest investors and valuations." required></textarea><button class="primary">Research and preview →</button></form><div id="dialogResearchResult"></div><small>Only records with a public source URL can be added, and all additions are marked for review.</small><div class="source-badges"><span>Web search</span><span>PitchBook</span><span>Crunchbase</span><span>SEC / filings</span><span>Finance databases</span></div></dialog>
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
