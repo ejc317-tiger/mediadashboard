@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'authe
     }
 }
 ?>
-<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Sign in · Northstar</title><link rel="stylesheet" href="styles.css"></head><body class="auth-page">
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Sign in · Northstar</title><link rel="stylesheet" href="styles.css?v=2"></head><body class="auth-page">
 <form class="auth-card" method="post">
   <div class="brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>northstar</span></div>
   <?php if ($needsDatabaseSetup): ?>

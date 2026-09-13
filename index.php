@@ -15,7 +15,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <aside class="sidebar">
@@ -34,10 +34,8 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       <button class="nav-item" data-view="spacs"><span class="icon">◎</span>SPACs</button>
       <p class="nav-label second">Intelligence</p>
       <button class="nav-item" data-view="research"><span class="icon">✦</span>Company research</button>
-      <button class="nav-item"><span class="icon">◴</span>Saved searches</button>
     </nav>
     <div class="sidebar-foot">
-      <button class="help"><span>?</span>Help center</button>
       <div class="profile"><div class="avatar"><?=htmlspecialchars(strtoupper(substr($displayName,0,2)))?></div><div><strong><?=htmlspecialchars($displayName)?></strong><small>Authenticated</small></div><a href="logout.php" title="Sign out">↪</a></div>
     </div>
   </aside>
@@ -46,6 +44,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <header class="topbar">
       <div class="crumb"><span>Northstar</span><b>/</b><strong id="pageCrumb">Overview</strong></div>
       <div class="top-actions">
+        <div class="connection-status" id="connectionStatus" title="Dashboard database status"><span class="connection-dot"></span><span id="syncLabel">Connecting…</span></div>
         <button class="settings-link" data-view="settings" aria-label="Open settings"><span>⚙</span> Settings</button>
         <button class="outline" id="addCompany">＋ Add company</button>
         <button class="primary" id="askAi">✦ Ask Northstar AI</button>
@@ -55,7 +54,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
     <section class="content" id="overviewView">
       <div class="welcome-row">
         <div><p class="eyebrow"><?=strtoupper(date('l, F j'))?></p><h1>Welcome, <?=htmlspecialchars($displayName)?>.</h1><p class="subtitle">Here’s what’s happening across your coverage universe.</p></div>
-        <div class="updated"><span></span><span id="syncLabel">Connecting to database…</span></div>
       </div>
 
       <section class="ai-search">
@@ -66,7 +64,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
       </section>
       <div class="data-notice"><span>ⓘ</span><p><strong>Live workspace</strong> — Database updates are source-gated and marked for review until an analyst verifies the linked disclosure.</p><button id="dismissNotice" aria-label="Dismiss">×</button></div>
 
-      <div class="section-head"><div><h2>Market pulse</h2><p>Key metrics across your tracked universe</p></div><select aria-label="Time period"><option>Last 30 days</option><option>Last quarter</option></select></div>
+      <div class="section-head"><div><h2>Market pulse</h2><p>Current totals across your tracked universe</p></div></div>
       <div class="metrics">
         <article class="metric clickable" data-view="allcompanies"><div class="metric-top"><span class="metric-icon purple">▦</span></div><strong id="allCount">—</strong><p>All companies</p><small>Open database →</small></article>
         <article class="metric clickable" data-view="pefirms"><div class="metric-top"><span class="metric-icon purple">◈</span></div><strong id="peFirmCount">—</strong><p>Private equity firms</p><small>Open ownership portfolios →</small></article>
@@ -83,7 +81,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
         </section>
 
         <section class="panel map-panel">
-          <div class="panel-head"><div><h2>Data center footprint</h2><p>Capacity by region</p></div><button class="dots">•••</button></div>
+          <div class="panel-head"><div><h2>Data center footprint</h2><p>Capacity by region</p></div></div>
           <div class="map" aria-label="Stylized map showing data center locations">
             <svg viewBox="0 0 650 310" role="img"><path d="M33 78l41-38 74-12 55 22 26 37-30 24-29 53-31 14-20-38-39-15-31-7zM166 186l38 20 23 53-25 44-25-44-16-43zM299 55l45-20 40 13 8 22 70-13 76 21 73 49-20 28-69 4-21 29-51-13-38 15-34-30-48-16-25-31-24-11zM382 181l45 4 34 38-4 64-47 13-31-56zM525 234l42-20 44 17 11 34-50 13-42-15z"/></svg>
             <div id="mapPins"></div>
@@ -132,6 +130,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
