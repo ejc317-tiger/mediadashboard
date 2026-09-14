@@ -137,6 +137,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

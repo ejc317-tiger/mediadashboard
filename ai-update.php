@@ -32,9 +32,10 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
         'input' => $prompt . $licensedContext,
         'tools' => [['type' => 'web_search']],
         'max_output_tokens' => $depth === 'exhaustive' ? 24000 : ($depth === 'deep' ? 16000 : 8000),
+        'background' => true,
     ];
     $ch = curl_init('https://api.openai.com/v1/responses');
-    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_TIMEOUT => 120]);
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_TIMEOUT => 30]);
     $raw = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $curlError = curl_error($ch);
@@ -45,6 +46,13 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
         $detail = trim((string) ($response['error']['message'] ?? 'The API returned HTTP ' . $status . '.'));
         throw new RuntimeException('AI service rejected the request: ' . $detail);
     }
+    if (in_array($response['status'] ?? '', ['queued','in_progress'], true) && !empty($response['id'])) return ['background_id'=>(string)$response['id']];
+    return finishResearchResponse($response, $key, $model, $maximumRecords, $depth);
+}
+
+function finishResearchResponse(array $response, string $key, string $model, int $maximumRecords, string $depth): array
+{
+    if (($response['status'] ?? '') === 'failed') throw new RuntimeException('AI research failed: ' . ($response['error']['message'] ?? 'unknown service error'));
     $text = (string) ($response['output_text'] ?? '');
     if ($text === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (($content['type'] ?? '') === 'output_text' || isset($content['text'])) $text .= (string) ($content['text'] ?? '');
     if ($text === '') {
@@ -262,7 +270,29 @@ try {
     }
     if ($action === 'cancel') {
         unset($_SESSION['pending_research'][(string) ($input['token'] ?? '')]);
+        unset($_SESSION['pending_research_jobs'][(string) ($input['token'] ?? '')]);
         jsonResponse(['cancelled' => true]);
+    }
+    if ($action === 'poll') {
+        $token = (string) ($input['token'] ?? '');
+        $job = $_SESSION['pending_research_jobs'][$token] ?? null;
+        if (!is_array($job)) throw new RuntimeException('This research job expired. Please start it again.');
+        if (($job['created_at'] ?? 0) < time() - 3600) { unset($_SESSION['pending_research_jobs'][$token]); throw new RuntimeException('This research job exceeded one hour. Please start it again.'); }
+        $siteConfig = is_file(__DIR__ . '/config.php') ? require __DIR__ . '/config.php' : [];
+        $key = openAiApiKey(is_array($siteConfig) ? $siteConfig : []);
+        $handle = curl_init('https://api.openai.com/v1/responses/' . rawurlencode($job['response_id']));
+        curl_setopt_array($handle,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$key],CURLOPT_TIMEOUT=>20]);
+        $raw=curl_exec($handle);$status=curl_getinfo($handle,CURLINFO_RESPONSE_CODE);$error=curl_error($handle);curl_close($handle);
+        if($raw===false)throw new RuntimeException('Could not check research progress: '.($error?:'network error'));
+        $response=json_decode($raw,true,512,JSON_THROW_ON_ERROR);
+        if($status>=400)throw new RuntimeException($response['error']['message']??"OpenAI returned HTTP $status.");
+        if(in_array($response['status']??'', ['queued','in_progress'], true)) jsonResponse(['processing'=>true,'token'=>$token,'status'=>$response['status']]);
+        unset($_SESSION['pending_research_jobs'][$token]);
+        $result=finishResearchResponse($response,$key,$job['model'],$job['maximum_records'],$job['depth']);
+        $preview=previewRecords($result['records']);
+        if($preview===[])jsonResponse(['requires_confirmation'=>false,'records'=>[],'report'=>$result['report'],'warning'=>$result['extraction_error']??'No sourced database records were found.']);
+        $_SESSION['pending_research'][$token]=['prompt'=>$job['prompt'],'result'=>$result,'providers'=>$job['providers'],'created_at'=>time()];
+        jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>$preview,'report'=>$result['report']]);
     }
     $prompt = trim((string) ($input['prompt'] ?? ''));
     if (strlen($prompt) < 10) throw new RuntimeException('Please provide a more specific research request.');
@@ -274,6 +304,11 @@ try {
     $model = (string) ($input['model'] ?? (getenv('OPENAI_MODEL') ?: 'gpt-5-mini'));
     $licensed = queryFinanceSources($prompt);
     $result = callResearchService($prompt, $key, $licensed, $depth, $maximumRecords, $model);
+    if(isset($result['background_id'])){
+        $token=bin2hex(random_bytes(24));
+        $_SESSION['pending_research_jobs'][$token]=['response_id'=>$result['background_id'],'prompt'=>$prompt,'providers'=>array_values(array_unique(array_column($licensed,'provider'))),'depth'=>$depth,'maximum_records'=>$maximumRecords,'model'=>isChatModelId($model)?$model:'gpt-5-mini','created_at'=>time()];
+        jsonResponse(['processing'=>true,'token'=>$token,'status'=>'queued']);
+    }
     $preview = previewRecords($result['records']);
     if ($preview === []) jsonResponse(['requires_confirmation'=>false,'records'=>[],'report'=>$result['report'],'warning'=>$result['extraction_error'] ?? 'No sourced database records were found.']);
     $token = bin2hex(random_bytes(24));
