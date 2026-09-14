@@ -30,7 +30,7 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
     $maximumRecords = max(1, min(50, $maximumRecords));
     if (!in_array($model, allowedChatModels(), true)) $model = 'gpt-5-mini';
     $licensedContext = $licensed ? "\nLicensed database results supplied by the server:\n" . json_encode($licensed, JSON_THROW_ON_ERROR) : '';
-    $instructions = $depthInstructions[$depth] . ' Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Write a thorough, readable research report with source URLs. Do not format the response as JSON; a separate pass will extract database records.';
+    $instructions = $depthInstructions[$depth] . ' Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Do not ask the user follow-up questions; make the best supported determination from the request and clearly note any limitations. Write a thorough, readable research report with source URLs. Do not format the response as JSON; a separate pass will extract database records.';
     $payload = [
         'model' => $model,
         'instructions' => $instructions,
@@ -68,8 +68,52 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
 
 function extractResearchRecords(string $report, string $key, string $model, int $maximumRecords, string $depth): array
 {
+    $chunks = splitResearchReport($report);
+    $records = [];
+    $errors = [];
+    $perChunkLimit = max(5, (int) ceil($maximumRecords / count($chunks)) + 2);
+    foreach ($chunks as $chunk) {
+        try {
+            $result = extractResearchChunk($chunk, $key, $model, $perChunkLimit, $depth);
+            foreach ($result['records'] ?? [] as $record) {
+                $identity = strtolower((string) ($record['type'] ?? '') . '|' . (string) ($record['name'] ?? '') . '|' . (string) (($record['data']['round_name'] ?? $record['data']['company_name'] ?? '')));
+                if ($identity !== '||') $records[$identity] = $record;
+                if (count($records) >= $maximumRecords) break 2;
+            }
+        } catch (Throwable $exception) {
+            $errors[] = $exception->getMessage();
+        }
+    }
+    if ($records === []) throw new RuntimeException($errors[0] ?? 'No database records could be extracted from the report.');
+    return ['records'=>array_values($records)];
+}
+
+function splitResearchReport(string $report, int $maximumCharacters = 40000): array
+{
+    if (strlen($report) <= $maximumCharacters) return [$report];
+    $paragraphs = preg_split('/\n{2,}/', $report) ?: [$report];
+    $chunks = []; $current = '';
+    foreach ($paragraphs as $paragraph) {
+        if ($current !== '' && strlen($current) + strlen($paragraph) + 2 > $maximumCharacters) { $chunks[] = $current; $current = ''; }
+        if (strlen($paragraph) > $maximumCharacters) {
+            if ($current !== '') { $chunks[] = $current; $current = ''; }
+            while ($paragraph !== '') {
+                $cut = min($maximumCharacters, strlen($paragraph));
+                while ($cut > 0 && $cut < strlen($paragraph) && (ord($paragraph[$cut]) & 0xC0) === 0x80) $cut--;
+                if ($cut === 0) $cut = min($maximumCharacters, strlen($paragraph));
+                $chunks[] = substr($paragraph, 0, $cut);
+                $paragraph = substr($paragraph, $cut);
+            }
+        } else $current .= ($current === '' ? '' : "\n\n") . $paragraph;
+    }
+    if ($current !== '') $chunks[] = $current;
+    return $chunks ?: [$report];
+}
+
+function extractResearchChunk(string $report, string $key, string $model, int $maximumRecords, string $depth): array
+{
     $instructions = "Extract up to $maximumRecords database records from the supplied report. Return one JSON object with a records array. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Company data should include what it does, last_round_date, last_round_size, last_round_valuation, valuation_currency, and investors when disclosed. VC and PE firm data should include aum, aum_currency, key_contacts, strategy, headquarters, and active portfolios when disclosed. Data-center records should include geographic region in category, location, latitude, longitude, owner, builder, power_mw, tenant, financing, status, description, and as_of_date when disclosed. Only include facts supported by a public source_url in the report. Include entity records before relationship records. Use null for undisclosed values.";
-    $payload = ['model'=>$model,'instructions'=>$instructions,'input'=>$report,'text'=>['format'=>['type'=>'json_object']],'max_output_tokens'=>$depth === 'exhaustive' ? 24000 : 16000];
+    $payload = ['model'=>$model,'instructions'=>$instructions,'input'=>"Return JSON records extracted from this research report:\n\n".$report,'text'=>['format'=>['type'=>'json_object']],'max_output_tokens'=>$depth === 'exhaustive' ? 16000 : 12000];
     $handle = curl_init('https://api.openai.com/v1/responses');
     curl_setopt_array($handle, [CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$key,'Content-Type: application/json'],CURLOPT_POSTFIELDS=>json_encode($payload, JSON_THROW_ON_ERROR),CURLOPT_TIMEOUT=>120]);
     $raw = curl_exec($handle); $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE); $error = curl_error($handle); curl_close($handle);
@@ -92,7 +136,7 @@ function repairExtractedJson(string $text, string $key, string $model): array
     $payload = [
         'model'=>$model,
         'instructions'=>'Repair the supplied partial or malformed JSON. Return one valid JSON object with a records array. Preserve every complete record, discard only incomplete trailing records, and do not add facts or commentary.',
-        'input'=>$text,
+        'input'=>"Repair this content and return valid JSON only:\n\n".$text,
         'text'=>['format'=>['type'=>'json_object']],
         'max_output_tokens'=>24000,
     ];
