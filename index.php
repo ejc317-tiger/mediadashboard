@@ -117,6 +117,11 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
           <form class="key-form" id="apiKeyForm"><label for="apiKeyInput">New API key</label><div><input id="apiKeyInput" type="password" name="api_key" autocomplete="new-password" placeholder="sk-…" required><button class="primary">Save to database</button></div><small>The key is encrypted before it is stored and is never returned to your browser.</small></form>
           <div class="health-result checking" id="apiKeyResult" role="status"><span class="status-dot"></span><div><strong>Checking API key</strong><small>Open Settings to verify the configured credential with OpenAI.</small></div></div>
         </section>
+        <section class="panel settings-panel initial-run-panel">
+          <div class="settings-card-head"><span class="settings-card-icon database-icon">✦</span><div><h2>Initial research run</h2><p>Create a sourced baseline for AI startups, active SPACs, US TMT venture capital, and TMT private equity.</p></div></div>
+          <div class="settings-action initial-run-action"><div><strong>Four exhaustive research jobs</strong><small>Each job creates a separate report and preview. Review and confirm each one before its records are saved.</small></div><label>Chat model<select id="initialRunModel"><option value="gpt-5-mini">GPT-5 mini</option><option value="gpt-5">GPT-5</option><option value="gpt-4.1-mini">GPT-4.1 mini</option><option value="gpt-4.1">GPT-4.1</option></select></label><button class="primary" id="initialRun">Start initial run</button></div>
+          <div id="initialRunResults" class="initial-run-results"></div>
+        </section>
       </div>
     </section>
 
@@ -130,6 +135,6 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
   <meta name="csrf-token" content="<?=htmlspecialchars(csrfToken())?>">
   <aside class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-head"><span id="drawerType">COMPANY PROFILE</span><button id="closeDrawer" aria-label="Close profile">×</button></div><div id="drawerContent"></div></aside><div class="drawer-backdrop" id="drawerBackdrop"></div>
   <div id="toast" role="status"></div>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

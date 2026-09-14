@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS private_equity_firms (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  name VARCHAR(180) NOT NULL UNIQUE,
  strategy VARCHAR(120) NOT NULL,
- headquarters VARCHAR(180),
+ headquarters VARCHAR(180), aum DECIMAL(20,2), aum_currency CHAR(3), key_contacts TEXT,
  description TEXT,
  source_name VARCHAR(180), source_url VARCHAR(2048), as_of_date DATE,
  confidence ENUM('Verified','Refresh','Review') DEFAULT 'Review',
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS private_equity_firms (
 
 CREATE TABLE IF NOT EXISTS vc_firms (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, name VARCHAR(180) NOT NULL UNIQUE,
- category VARCHAR(100) NOT NULL DEFAULT 'Venture Capital', headquarters VARCHAR(180), description TEXT,
+ category VARCHAR(100) NOT NULL DEFAULT 'Venture Capital', headquarters VARCHAR(180), aum DECIMAL(20,2), aum_currency CHAR(3), key_contacts TEXT, description TEXT,
  source_name VARCHAR(180), source_url VARCHAR(2048), as_of_date DATE,
  confidence ENUM('Verified','Refresh','Review') DEFAULT 'Review',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

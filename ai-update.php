@@ -68,7 +68,7 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
 
 function extractResearchRecords(string $report, string $key, string $model, int $maximumRecords, string $depth): array
 {
-    $instructions = "Extract up to $maximumRecords database records from the supplied report. Return one JSON object with a records array. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Only include facts supported by a public source_url in the report. Include entity records before relationship records. Use null for undisclosed values.";
+    $instructions = "Extract up to $maximumRecords database records from the supplied report. Return one JSON object with a records array. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Company data should include what it does, last_round_date, last_round_size, last_round_valuation, valuation_currency, and investors when disclosed. VC and PE firm data should include aum, aum_currency, key_contacts, strategy, headquarters, and active portfolios when disclosed. Only include facts supported by a public source_url in the report. Include entity records before relationship records. Use null for undisclosed values.";
     $payload = ['model'=>$model,'instructions'=>$instructions,'input'=>$report,'text'=>['format'=>['type'=>'json_object']],'max_output_tokens'=>$depth === 'exhaustive' ? 24000 : 16000];
     $handle = curl_init('https://api.openai.com/v1/responses');
     curl_setopt_array($handle, [CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$key,'Content-Type: application/json'],CURLOPT_POSTFIELDS=>json_encode($payload, JSON_THROW_ON_ERROR),CURLOPT_TIMEOUT=>120]);
@@ -151,8 +151,8 @@ function writeResearchResults(PDO $db, array $result, string $prompt, array $pro
         'company'=>['companies',['sector','is_ai','headquarters','founded_year','description','last_round_date','last_round_size','last_round_valuation','valuation_currency','source_name','source_url','as_of_date']],
         'ai_company'=>['companies',['sector','headquarters','founded_year','description','last_round_date','last_round_size','last_round_valuation','valuation_currency','source_name','source_url','as_of_date']],
         'data_center'=>['data_centers',['category','location','latitude','longitude','owner','builder','power_mw','tenant','financing','status','description','source_name','source_url','as_of_date']],
-        'pe_firm'=>['private_equity_firms',['strategy','headquarters','description','source_name','source_url','as_of_date']],
-        'vc_firm'=>['vc_firms',['category','headquarters','description','source_name','source_url','as_of_date']],
+        'pe_firm'=>['private_equity_firms',['strategy','headquarters','aum','aum_currency','key_contacts','description','source_name','source_url','as_of_date']],
+        'vc_firm'=>['vc_firms',['category','headquarters','aum','aum_currency','key_contacts','description','source_name','source_url','as_of_date']],
         'spac'=>['spac_vehicles',['sponsor','raised_date','ipo_size','currency','deadline','status','description','source_name','source_url','as_of_date']],
     ];
     $run = $db->prepare('INSERT INTO ai_update_runs(user_id,prompt) VALUES(?,?)');

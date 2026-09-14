@@ -26,6 +26,8 @@ The **Company research** tab accepts either a company or investor target. It ask
 
 Research requests can cover a single organization or an entire market, sector, geography, or investment theme. Choose Standard, Deep, or Exhaustive depth and a limit of up to 50 proposed records. Deep modes allocate larger responses and instruct the model to search iteratively, reconcile conflicting facts, and collect supported entity and relationship records across multiple sources.
 
+Settings includes an **Initial research run** that runs four exhaustive jobs for the last ten years of funded AI startups, currently active SPACs, qualifying US TMT venture firms and active portfolios, and TMT private-equity firms and active portfolios. Each job has its own report and confirmation step. Investor records support AUM, active portfolio size, and publicly disclosed key contacts; company records support descriptions, latest round dates, round sizes, valuations, and investor relationships.
+
 Research uses a two-pass workflow: the selected chat model first produces a detailed, readable report with web search, which is displayed directly in the research results. A second request without web search uses JSON mode to extract database-ready records from that report. If a long structured response is truncated or malformed, a repair pass preserves complete records and discards only an incomplete trailing record. If extraction still cannot be completed, the readable report remains available and the UI recommends a smaller record limit.
 
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
