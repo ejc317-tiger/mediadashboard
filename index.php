@@ -19,7 +19,7 @@ $displayName = (string) ($userStatement->fetchColumn() ?: 'User');
 </head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="#" aria-label="Northstar home">
+    <a class="brand" href="index.php" aria-label="Northstar home">
       <span class="brand-mark"><i></i><i></i><i></i></span>
       <span>northstar</span>
     </a>
