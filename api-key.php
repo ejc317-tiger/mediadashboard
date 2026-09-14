@@ -16,7 +16,12 @@ function checkOpenAiKey(string $key): array
     $curlError = curl_error($handle);
     curl_close($handle);
     if ($raw === false) return ['configured' => true, 'working' => false, 'message' => 'OpenAI could not be reached: ' . ($curlError ?: 'network error')];
-    if ($status >= 200 && $status < 300) return ['configured' => true, 'working' => true, 'message' => 'The saved API key was accepted by OpenAI.'];
+    if ($status >= 200 && $status < 300) {
+        $payload = json_decode($raw, true);
+        $models = array_values(array_filter(array_map(fn($item)=>(string)($item['id'] ?? ''), $payload['data'] ?? []), 'isChatModelId'));
+        usort($models, fn($left,$right)=>strnatcasecmp($right,$left));
+        return ['configured' => true, 'working' => true, 'message' => 'The saved API key was accepted by OpenAI.', 'models'=>$models];
+    }
     $payload = json_decode($raw, true);
     $detail = trim((string) ($payload['error']['message'] ?? "OpenAI returned HTTP $status."));
     return ['configured' => true, 'working' => false, 'message' => $detail];

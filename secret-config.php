@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+function isChatModelId(string $model): bool
+{
+    if (!preg_match('/^(gpt-|chatgpt-|o[134](?:-|$))/', $model)) return false;
+    return !preg_match('/(realtime|audio|image|transcrib|tts|embedding|moderation|search|deep-research|codex)/', $model);
+}
+
 function settingsEncryptionKey(): string
 {
     $environment = trim((string) (getenv('APP_ENCRYPTION_KEY') ?: ''));

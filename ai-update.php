@@ -14,11 +14,6 @@ function jsonResponse(array $payload, int $status = 200): never
     exit;
 }
 
-function allowedChatModels(): array
-{
-    return ['gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4.1'];
-}
-
 function callResearchService(string $prompt, string $key, array $licensed, string $depth = 'deep', int $maximumRecords = 15, string $model = 'gpt-5-mini'): array
 {
     $depthInstructions = [
@@ -28,7 +23,7 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
     ];
     $depth = array_key_exists($depth, $depthInstructions) ? $depth : 'deep';
     $maximumRecords = max(1, min(50, $maximumRecords));
-    if (!in_array($model, allowedChatModels(), true)) $model = 'gpt-5-mini';
+    if (!isChatModelId($model)) $model = 'gpt-5-mini';
     $licensedContext = $licensed ? "\nLicensed database results supplied by the server:\n" . json_encode($licensed, JSON_THROW_ON_ERROR) : '';
     $instructions = $depthInstructions[$depth] . ' Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Do not ask the user follow-up questions; make the best supported determination from the request and clearly note any limitations. Write a thorough, readable research report with source URLs. Do not format the response as JSON; a separate pass will extract database records.';
     $payload = [
