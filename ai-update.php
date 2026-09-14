@@ -31,16 +31,19 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
         'instructions' => $instructions,
         'input' => $prompt . $licensedContext,
         'tools' => [['type' => 'web_search']],
-        'max_output_tokens' => $depth === 'exhaustive' ? 24000 : ($depth === 'deep' ? 16000 : 8000),
+        // Keep the report bounded; breadth comes from tool calls and record extraction is chunked separately.
+        'max_output_tokens' => $depth === 'standard' ? 4000 : 8000,
+        'max_tool_calls' => $depth === 'exhaustive' ? 20 : ($depth === 'deep' ? 12 : 6),
         'background' => true,
+        'store' => true,
     ];
     $ch = curl_init('https://api.openai.com/v1/responses');
-    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_TIMEOUT => 30]);
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json', 'Accept: application/json'], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR), CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => 25]);
     $raw = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
-    if ($raw === false) throw new RuntimeException('AI service connection failed: ' . ($curlError ?: 'unknown network error'));
+    if ($raw === false) throw new RuntimeException('OpenAI background-job submission failed before a job ID was returned: ' . ($curlError ?: 'unknown network error') . '. Confirm the server allows outbound HTTPS to api.openai.com.');
     $response = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
     if ($status >= 400) {
         $detail = trim((string) ($response['error']['message'] ?? 'The API returned HTTP ' . $status . '.'));
