@@ -30,6 +30,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
  updated_by BIGINT UNSIGNED NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
+CREATE TABLE IF NOT EXISTS research_jobs (
+ id CHAR(48) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, response_id VARCHAR(100) NOT NULL,
+ prompt LONGTEXT NOT NULL, model VARCHAR(100) NOT NULL, depth VARCHAR(20) NOT NULL,
+ maximum_records INT UNSIGNED NOT NULL, providers_json TEXT, status VARCHAR(30) NOT NULL DEFAULT 'Queued',
+ report LONGTEXT, result_json LONGTEXT, error_message VARCHAR(1000),
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, completed_at TIMESTAMP NULL,
+ FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE, KEY idx_research_user_status(user_id,status,updated_at)
+);
 INSERT INTO data_sources(name,source_type) VALUES
  ('Web search','Web search'),('PitchBook','Licensed database'),('Crunchbase','Licensed database'),
  ('SEC EDGAR','Regulatory'),('Company and investor disclosures','Company disclosure'),('Additional finance databases','Licensed database')

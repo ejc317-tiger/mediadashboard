@@ -267,20 +267,33 @@ try {
     if ($action === 'confirm') {
         $token = (string) ($input['token'] ?? '');
         $pending = $_SESSION['pending_research'][$token] ?? null;
-        if (!is_array($pending)) throw new RuntimeException('This research preview expired. Please run the research again.');
+        if (!is_array($pending)) {
+            $statement=database()->prepare("SELECT prompt,result_json,providers_json FROM research_jobs WHERE id=? AND user_id=? AND status='Awaiting confirmation'");$statement->execute([$token,$_SESSION['user_id']]);$stored=$statement->fetch();
+            if($stored)$pending=['prompt'=>$stored['prompt'],'result'=>json_decode($stored['result_json'],true,512,JSON_THROW_ON_ERROR),'providers'=>json_decode($stored['providers_json']?:'[]',true,512,JSON_THROW_ON_ERROR)];
+        }
+        if (!is_array($pending)) throw new RuntimeException('This research preview is unavailable or was already processed.');
         unset($_SESSION['pending_research'][$token]);
-        jsonResponse(writeResearchResults(database(), $pending['result'], $pending['prompt'], $pending['providers']));
+        $written=writeResearchResults(database(), $pending['result'], $pending['prompt'], $pending['providers']);
+        database()->prepare("UPDATE research_jobs SET status='Confirmed',completed_at=NOW() WHERE id=? AND user_id=?")->execute([$token,$_SESSION['user_id']]);
+        jsonResponse($written);
     }
     if ($action === 'cancel') {
         unset($_SESSION['pending_research'][(string) ($input['token'] ?? '')]);
         unset($_SESSION['pending_research_jobs'][(string) ($input['token'] ?? '')]);
+        database()->prepare("UPDATE research_jobs SET status='Cancelled',completed_at=NOW() WHERE id=? AND user_id=?")->execute([(string)($input['token']??''),$_SESSION['user_id']]);
         jsonResponse(['cancelled' => true]);
+    }
+    if($action==='list'){
+        $statement=database()->prepare("SELECT id,status,LEFT(prompt,180) prompt,created_at,updated_at FROM research_jobs WHERE user_id=? AND status IN ('Queued','In progress','Awaiting confirmation','Failed') ORDER BY updated_at DESC LIMIT 20");$statement->execute([$_SESSION['user_id']]);
+        jsonResponse(['jobs'=>$statement->fetchAll()]);
     }
     if ($action === 'poll') {
         $token = (string) ($input['token'] ?? '');
-        $job = $_SESSION['pending_research_jobs'][$token] ?? null;
+        $statement=database()->prepare('SELECT * FROM research_jobs WHERE id=? AND user_id=?');$statement->execute([$token,$_SESSION['user_id']]);$job=$statement->fetch();
         if (!is_array($job)) throw new RuntimeException('This research job expired. Please start it again.');
-        if (($job['created_at'] ?? 0) < time() - 3600) { unset($_SESSION['pending_research_jobs'][$token]); throw new RuntimeException('This research job exceeded one hour. Please start it again.'); }
+        if($job['status']==='Awaiting confirmation'){jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>previewRecords(json_decode($job['result_json'],true,512,JSON_THROW_ON_ERROR)['records']??[]),'report'=>$job['report']]);}
+        if($job['status']==='Failed')throw new RuntimeException($job['error_message']?:'The research job failed.');
+        if (strtotime((string)($job['created_at'] ?? '')) < time() - 86400) throw new RuntimeException('This research job is more than 24 hours old. Start it again to refresh the sources.');
         $siteConfig = is_file(__DIR__ . '/config.php') ? require __DIR__ . '/config.php' : [];
         $key = openAiApiKey(is_array($siteConfig) ? $siteConfig : []);
         $handle = curl_init('https://api.openai.com/v1/responses/' . rawurlencode($job['response_id']));
@@ -289,12 +302,13 @@ try {
         if($raw===false)throw new RuntimeException('Could not check research progress: '.($error?:'network error'));
         $response=json_decode($raw,true,512,JSON_THROW_ON_ERROR);
         if($status>=400)throw new RuntimeException($response['error']['message']??"OpenAI returned HTTP $status.");
-        if(in_array($response['status']??'', ['queued','in_progress'], true)) jsonResponse(['processing'=>true,'token'=>$token,'status'=>$response['status']]);
+        if(in_array($response['status']??'', ['queued','in_progress'], true)){database()->prepare('UPDATE research_jobs SET status=? WHERE id=?')->execute([$response['status']==='queued'?'Queued':'In progress',$token]);jsonResponse(['processing'=>true,'token'=>$token,'status'=>$response['status']]);}
         unset($_SESSION['pending_research_jobs'][$token]);
-        $result=finishResearchResponse($response,$key,$job['model'],$job['maximum_records'],$job['depth']);
+        try{$result=finishResearchResponse($response,$key,$job['model'],$job['maximum_records'],$job['depth']);}catch(Throwable $exception){database()->prepare("UPDATE research_jobs SET status='Failed',error_message=?,completed_at=NOW() WHERE id=?")->execute([substr($exception->getMessage(),0,1000),$token]);throw $exception;}
         $preview=previewRecords($result['records']);
-        if($preview===[])jsonResponse(['requires_confirmation'=>false,'records'=>[],'report'=>$result['report'],'warning'=>$result['extraction_error']??'No sourced database records were found.']);
-        $_SESSION['pending_research'][$token]=['prompt'=>$job['prompt'],'result'=>$result,'providers'=>$job['providers'],'created_at'=>time()];
+        if($preview===[]){database()->prepare("UPDATE research_jobs SET status='Failed',report=?,error_message=?,completed_at=NOW() WHERE id=?")->execute([$result['report'],$result['extraction_error']??'No sourced database records were found.',$token]);jsonResponse(['requires_confirmation'=>false,'records'=>[],'report'=>$result['report'],'warning'=>$result['extraction_error']??'No sourced database records were found.']);}
+        database()->prepare("UPDATE research_jobs SET status='Awaiting confirmation',report=?,result_json=?,completed_at=NOW() WHERE id=?")->execute([$result['report'],json_encode($result,JSON_THROW_ON_ERROR),$token]);
+        $_SESSION['pending_research'][$token]=['prompt'=>$job['prompt'],'result'=>$result,'providers'=>json_decode($job['providers_json']?:'[]',true,512,JSON_THROW_ON_ERROR),'created_at'=>time()];
         jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>$preview,'report'=>$result['report']]);
     }
     $prompt = trim((string) ($input['prompt'] ?? ''));
@@ -309,7 +323,8 @@ try {
     $result = callResearchService($prompt, $key, $licensed, $depth, $maximumRecords, $model);
     if(isset($result['background_id'])){
         $token=bin2hex(random_bytes(24));
-        $_SESSION['pending_research_jobs'][$token]=['response_id'=>$result['background_id'],'prompt'=>$prompt,'providers'=>array_values(array_unique(array_column($licensed,'provider'))),'depth'=>$depth,'maximum_records'=>$maximumRecords,'model'=>isChatModelId($model)?$model:'gpt-5-mini','created_at'=>time()];
+        $providers=array_values(array_unique(array_column($licensed,'provider')));$model=isChatModelId($model)?$model:'gpt-5-mini';
+        database()->prepare('INSERT INTO research_jobs(id,user_id,response_id,prompt,model,depth,maximum_records,providers_json) VALUES(?,?,?,?,?,?,?,?)')->execute([$token,$_SESSION['user_id'],$result['background_id'],$prompt,$model,$depth,$maximumRecords,json_encode($providers,JSON_THROW_ON_ERROR)]);
         jsonResponse(['processing'=>true,'token'=>$token,'status'=>'queued']);
     }
     $preview = previewRecords($result['records']);
