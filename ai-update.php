@@ -78,8 +78,38 @@ function extractResearchRecords(string $report, string $key, string $model, int 
     if ($status >= 400) throw new RuntimeException('AI record extraction was rejected: ' . ($response['error']['message'] ?? "HTTP $status"));
     $text = (string) ($response['output_text'] ?? '');
     if ($text === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (isset($content['text'])) $text .= (string) $content['text'];
-    if ($text === '') throw new RuntimeException('The report was created, but no database records could be extracted.');
-    return decodeResearchResult($text);
+    if ($text === '') throw new RuntimeException('The report was created, but the extraction pass returned no database records.');
+    try {
+        return decodeResearchResult($text);
+    } catch (Throwable) {
+        return repairExtractedJson($text, $key, $model);
+    }
+}
+
+/** Ask the chat model to close or repair truncated JSON rather than discarding a long report. */
+function repairExtractedJson(string $text, string $key, string $model): array
+{
+    $payload = [
+        'model'=>$model,
+        'instructions'=>'Repair the supplied partial or malformed JSON. Return one valid JSON object with a records array. Preserve every complete record, discard only incomplete trailing records, and do not add facts or commentary.',
+        'input'=>$text,
+        'text'=>['format'=>['type'=>'json_object']],
+        'max_output_tokens'=>24000,
+    ];
+    $handle = curl_init('https://api.openai.com/v1/responses');
+    curl_setopt_array($handle, [CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$key,'Content-Type: application/json'],CURLOPT_POSTFIELDS=>json_encode($payload, JSON_THROW_ON_ERROR),CURLOPT_TIMEOUT=>120]);
+    $raw = curl_exec($handle); $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE); $error = curl_error($handle); curl_close($handle);
+    if ($raw === false) throw new RuntimeException('The research report is available, but record repair could not connect: ' . ($error ?: 'network error'));
+    $response = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    if ($status >= 400) throw new RuntimeException('The research report is available, but record repair was rejected: ' . ($response['error']['message'] ?? "HTTP $status"));
+    $repaired = (string) ($response['output_text'] ?? '');
+    if ($repaired === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (isset($content['text'])) $repaired .= (string) $content['text'];
+    if ($repaired === '') throw new RuntimeException('The research report is available, but the model could not repair the database preview.');
+    try {
+        return decodeResearchResult($repaired);
+    } catch (Throwable $exception) {
+        throw new RuntimeException('The research report is available, but structured records could not be completed. Try a smaller record limit.', 0, $exception);
+    }
 }
 
 /** Decode JSON requested through instructions because web search cannot be combined with JSON mode. */
@@ -88,18 +118,18 @@ function decodeResearchResult(string $text): array
     $candidate = trim($text);
     if (preg_match('/^```(?:json)?\s*(.*?)\s*```$/is', $candidate, $match)) $candidate = trim($match[1]);
     try {
-        $decoded = json_decode($candidate, true, 512, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($candidate, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
     } catch (JsonException $exception) {
         $start = strpos($candidate, '{');
         $end = strrpos($candidate, '}');
-        if ($start === false || $end === false || $end <= $start) throw new RuntimeException('AI service returned research in an unreadable format.', 0, $exception);
+        if ($start === false || $end === false || $end <= $start) throw new RuntimeException('Structured records were incomplete.', 0, $exception);
         try {
-            $decoded = json_decode(substr($candidate, $start, $end - $start + 1), true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode(substr($candidate, $start, $end - $start + 1), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
         } catch (JsonException $nestedException) {
-            throw new RuntimeException('AI service returned research in an unreadable format.', 0, $nestedException);
+            throw new RuntimeException('Structured records were incomplete.', 0, $nestedException);
         }
     }
-    if (!is_array($decoded)) throw new RuntimeException('AI service returned research in an unreadable format.');
+    if (!is_array($decoded)) throw new RuntimeException('Structured records were incomplete.');
     return $decoded;
 }
 
