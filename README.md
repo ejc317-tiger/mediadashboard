@@ -26,7 +26,7 @@ The **Company research** tab accepts either a company or investor target. It ask
 
 Research requests can cover a single organization or an entire market, sector, geography, or investment theme. Choose Standard, Deep, or Exhaustive depth and a limit of up to 50 proposed records. Deep modes allocate larger responses and instruct the model to search iteratively, reconcile conflicting facts, and collect supported entity and relationship records across multiple sources.
 
-Research uses web search without Responses API JSON mode because those features cannot be combined. The model is instructed to return JSON, and the server validates and decodes that response before creating a preview.
+Research uses a two-pass workflow: the selected chat model first produces a detailed, readable report with web search, which is displayed directly in the research results. A second request without web search uses JSON mode to extract database-ready records from that report. If extraction fails or a long response cannot be converted, the report is still displayed instead of being discarded behind an “unreadable format” error.
 
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
 

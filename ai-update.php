@@ -14,7 +14,12 @@ function jsonResponse(array $payload, int $status = 200): never
     exit;
 }
 
-function callResearchService(string $prompt, string $key, array $licensed, string $depth = 'deep', int $maximumRecords = 15): array
+function allowedChatModels(): array
+{
+    return ['gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4.1'];
+}
+
+function callResearchService(string $prompt, string $key, array $licensed, string $depth = 'deep', int $maximumRecords = 15, string $model = 'gpt-5-mini'): array
 {
     $depthInstructions = [
         'standard' => 'Run a focused search and verify each material fact with the strongest available source.',
@@ -23,10 +28,11 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
     ];
     $depth = array_key_exists($depth, $depthInstructions) ? $depth : 'deep';
     $maximumRecords = max(1, min(50, $maximumRecords));
+    if (!in_array($model, allowedChatModels(), true)) $model = 'gpt-5-mini';
     $licensedContext = $licensed ? "\nLicensed database results supplied by the server:\n" . json_encode($licensed, JSON_THROW_ON_ERROR) : '';
-    $instructions = $depthInstructions[$depth] . " Return no more than $maximumRecords database records. " . 'Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Return only one valid JSON object with a records array, without Markdown fences or commentary. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Every record must contain a valid public source_url in data and an as_of_date where applicable. Include entity records for companies and firms before their relationship records. Investment data includes company_name, vc_firm_name, round_name, announced_date, amount, currency, is_lead, and source_url. Ownership data includes company_name, pe_firm_name, acquired_date, exited_date, ownership_notes, and source_url. Use null for undisclosed facts.';
+    $instructions = $depthInstructions[$depth] . ' Use web search and supplied licensed finance-database results. Prioritize regulatory filings, company and investor disclosures, and licensed sources. Never invent undisclosed values. Write a thorough, readable research report with source URLs. Do not format the response as JSON; a separate pass will extract database records.';
     $payload = [
-        'model' => getenv('OPENAI_MODEL') ?: 'gpt-5-mini',
+        'model' => $model,
         'instructions' => $instructions,
         'input' => $prompt . $licensedContext,
         'tools' => [['type' => 'web_search']],
@@ -50,9 +56,30 @@ function callResearchService(string $prompt, string $key, array $licensed, strin
         $reason = (string) ($response['incomplete_details']['reason'] ?? 'No output text was returned.');
         throw new RuntimeException('AI service returned no research results: ' . $reason);
     }
-    $result = decodeResearchResult($text);
+    try {
+        $result = extractResearchRecords($text, $key, $model, $maximumRecords, $depth);
+    } catch (Throwable $exception) {
+        return ['records'=>[], 'report'=>$text, 'extraction_error'=>$exception->getMessage()];
+    }
     if (!isset($result['records']) || !is_array($result['records'])) throw new RuntimeException('AI service returned an invalid records response.');
+    $result['report'] = $text;
     return $result;
+}
+
+function extractResearchRecords(string $report, string $key, string $model, int $maximumRecords, string $depth): array
+{
+    $instructions = "Extract up to $maximumRecords database records from the supplied report. Return one JSON object with a records array. Every record has type (company, ai_company, data_center, pe_firm, vc_firm, spac, vc_investment, pe_ownership), name, category, and data. Only include facts supported by a public source_url in the report. Include entity records before relationship records. Use null for undisclosed values.";
+    $payload = ['model'=>$model,'instructions'=>$instructions,'input'=>$report,'text'=>['format'=>['type'=>'json_object']],'max_output_tokens'=>$depth === 'exhaustive' ? 24000 : 16000];
+    $handle = curl_init('https://api.openai.com/v1/responses');
+    curl_setopt_array($handle, [CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$key,'Content-Type: application/json'],CURLOPT_POSTFIELDS=>json_encode($payload, JSON_THROW_ON_ERROR),CURLOPT_TIMEOUT=>120]);
+    $raw = curl_exec($handle); $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE); $error = curl_error($handle); curl_close($handle);
+    if ($raw === false) throw new RuntimeException('AI record extraction failed: ' . ($error ?: 'network error'));
+    $response = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    if ($status >= 400) throw new RuntimeException('AI record extraction was rejected: ' . ($response['error']['message'] ?? "HTTP $status"));
+    $text = (string) ($response['output_text'] ?? '');
+    if ($text === '') foreach ($response['output'] ?? [] as $output) foreach ($output['content'] ?? [] as $content) if (isset($content['text'])) $text .= (string) $content['text'];
+    if ($text === '') throw new RuntimeException('The report was created, but no database records could be extracted.');
+    return decodeResearchResult($text);
 }
 
 /** Decode JSON requested through instructions because web search cannot be combined with JSON mode. */
@@ -175,15 +202,16 @@ try {
     if (!$key) throw new RuntimeException('OPENAI_API_KEY is not configured. Open Settings in the top-right and save an API key.');
     $depth = (string) ($input['depth'] ?? 'deep');
     $maximumRecords = (int) ($input['maximum_records'] ?? 15);
+    $model = (string) ($input['model'] ?? (getenv('OPENAI_MODEL') ?: 'gpt-5-mini'));
     $licensed = queryFinanceSources($prompt);
-    $result = callResearchService($prompt, $key, $licensed, $depth, $maximumRecords);
+    $result = callResearchService($prompt, $key, $licensed, $depth, $maximumRecords, $model);
     $preview = previewRecords($result['records']);
-    if ($preview === []) throw new RuntimeException('Research completed, but no sourced records were returned. Nothing was added.');
+    if ($preview === []) jsonResponse(['requires_confirmation'=>false,'records'=>[],'report'=>$result['report'],'warning'=>$result['extraction_error'] ?? 'No sourced database records were found.']);
     $token = bin2hex(random_bytes(24));
     $_SESSION['pending_research'] = $_SESSION['pending_research'] ?? [];
     $_SESSION['pending_research'][$token] = ['prompt'=>$prompt,'result'=>$result,'providers'=>array_values(array_unique(array_column($licensed,'provider'))),'created_at'=>time()];
     foreach ($_SESSION['pending_research'] as $storedToken => $pending) if (($pending['created_at'] ?? 0) < time() - 1800) unset($_SESSION['pending_research'][$storedToken]);
-    jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>$preview]);
+    jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>$preview,'report'=>$result['report']]);
 } catch (Throwable $exception) {
     jsonResponse(['error' => $exception->getMessage()], 400);
 }
