@@ -1,8 +1,11 @@
 <?php
-/** Optional host override; database credentials are fixed in db.php. */
+/** Optional local configuration. Prefer server environment variables in production. */
 return [
     'host' => getenv('DB_HOST') ?: 'localhost',
     'port' => getenv('DB_PORT') ?: '3306',
+    'database' => getenv('DB_NAME') ?: '',
+    'username' => getenv('DB_USER') ?: '',
+    'password' => getenv('DB_PASSWORD') ?: '',
     // Prefer OPENAI_API_KEY or a server-mounted OPENAI_API_KEY_FILE.
     'openai_api_key_file' => getenv('OPENAI_API_KEY_FILE') ?: '',
     // Backward-compatible fallback: only set this in the gitignored config.php.

@@ -25,6 +25,19 @@ CREATE TABLE IF NOT EXISTS data_sources (
  source_type ENUM('Web search','Licensed database','Regulatory','Company disclosure') NOT NULL,
  enabled BOOLEAN NOT NULL DEFAULT TRUE, last_success_at TIMESTAMP NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS app_settings (
+ setting_key VARCHAR(100) PRIMARY KEY, setting_value TEXT NOT NULL,
+ updated_by BIGINT UNSIGNED NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS research_jobs (
+ id CHAR(48) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, response_id VARCHAR(100) NOT NULL,
+ prompt LONGTEXT NOT NULL, model VARCHAR(100) NOT NULL, depth VARCHAR(20) NOT NULL,
+ maximum_records INT UNSIGNED NOT NULL, providers_json TEXT, status VARCHAR(30) NOT NULL DEFAULT 'Queued',
+ report LONGTEXT, result_json LONGTEXT, error_message VARCHAR(1000),
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, completed_at TIMESTAMP NULL,
+ FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE, KEY idx_research_user_status(user_id,status,updated_at)
+);
 INSERT INTO data_sources(name,source_type) VALUES
  ('Web search','Web search'),('PitchBook','Licensed database'),('Crunchbase','Licensed database'),
  ('SEC EDGAR','Regulatory'),('Company and investor disclosures','Company disclosure'),('Additional finance databases','Licensed database')
@@ -59,7 +72,7 @@ CREATE TABLE IF NOT EXISTS private_equity_firms (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  name VARCHAR(180) NOT NULL UNIQUE,
  strategy VARCHAR(120) NOT NULL,
- headquarters VARCHAR(180),
+ headquarters VARCHAR(180), aum DECIMAL(20,2), aum_currency CHAR(3), key_contacts TEXT,
  description TEXT,
  source_name VARCHAR(180), source_url VARCHAR(2048), as_of_date DATE,
  confidence ENUM('Verified','Refresh','Review') DEFAULT 'Review',
@@ -69,7 +82,7 @@ CREATE TABLE IF NOT EXISTS private_equity_firms (
 
 CREATE TABLE IF NOT EXISTS vc_firms (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, name VARCHAR(180) NOT NULL UNIQUE,
- category VARCHAR(100) NOT NULL DEFAULT 'Venture Capital', headquarters VARCHAR(180), description TEXT,
+ category VARCHAR(100) NOT NULL DEFAULT 'Venture Capital', headquarters VARCHAR(180), aum DECIMAL(20,2), aum_currency CHAR(3), key_contacts TEXT, description TEXT,
  source_name VARCHAR(180), source_url VARCHAR(2048), as_of_date DATE,
  confidence ENUM('Verified','Refresh','Review') DEFAULT 'Review',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
