@@ -32,7 +32,7 @@ Research uses a two-pass workflow: the selected chat model first produces a deta
 
 Long web-research calls run through the Responses API background mode. The browser polls with short requests until OpenAI finishes, avoiding a single 120-second HTTP connection that can be terminated by PHP, a proxy, or the hosting platform.
 
-Research job metadata is also stored in the `research_jobs` table. Closing the tab, navigating elsewhere, or losing a browser connection does not stop the OpenAI job. Return to **Company research** and use **Resume research** to continue polling or review a completed preview. Reports awaiting confirmation remain available across PHP sessions; they still cannot write records until the user confirms them.
+Research job metadata is also stored in the `research_jobs` table without an arbitrary local expiration. Closing the tab, navigating elsewhere, or losing a browser connection does not stop the OpenAI job. Return to **Company research** and use **Resume research** to continue polling or review a completed preview. Reports awaiting confirmation remain available across PHP sessions; they still cannot write records until the user confirms them. Jobs created by the earlier session-only implementation are migrated when possible; if their state is gone during an active request, the browser automatically resubmits the original prompt once.
 
 Background submissions explicitly enable server-side response storage, cap tool calls by research depth, and bound the readable report to keep submission and later extraction reliable. If submission fails before OpenAI returns a job ID, the error identifies that stage separately; operators should confirm the PHP host permits outbound HTTPS to `api.openai.com`.
 

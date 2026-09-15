@@ -284,16 +284,21 @@ try {
         jsonResponse(['cancelled' => true]);
     }
     if($action==='list'){
-        $statement=database()->prepare("SELECT id,status,LEFT(prompt,180) prompt,created_at,updated_at FROM research_jobs WHERE user_id=? AND status IN ('Queued','In progress','Awaiting confirmation','Failed') ORDER BY updated_at DESC LIMIT 20");$statement->execute([$_SESSION['user_id']]);
+        $statement=database()->prepare("SELECT id,status,LEFT(prompt,180) prompt,created_at,updated_at FROM research_jobs WHERE user_id=? AND status IN ('Queued','In progress','Awaiting confirmation') ORDER BY updated_at DESC LIMIT 20");$statement->execute([$_SESSION['user_id']]);
         jsonResponse(['jobs'=>$statement->fetchAll()]);
     }
     if ($action === 'poll') {
         $token = (string) ($input['token'] ?? '');
         $statement=database()->prepare('SELECT * FROM research_jobs WHERE id=? AND user_id=?');$statement->execute([$token,$_SESSION['user_id']]);$job=$statement->fetch();
-        if (!is_array($job)) throw new RuntimeException('This research job expired. Please start it again.');
+        if (!is_array($job) && is_array($_SESSION['pending_research_jobs'][$token] ?? null)) {
+            $legacy=$_SESSION['pending_research_jobs'][$token];
+            $providers=$legacy['providers']??[];
+            database()->prepare('INSERT IGNORE INTO research_jobs(id,user_id,response_id,prompt,model,depth,maximum_records,providers_json) VALUES(?,?,?,?,?,?,?,?)')->execute([$token,$_SESSION['user_id'],$legacy['response_id'],$legacy['prompt'],$legacy['model'],$legacy['depth'],$legacy['maximum_records'],json_encode($providers,JSON_THROW_ON_ERROR)]);
+            $statement->execute([$token,$_SESSION['user_id']]);$job=$statement->fetch();
+        }
+        if (!is_array($job)) jsonResponse(['error'=>'The saved research job could not be found. It can be restarted automatically from the original request.','code'=>'job_not_found'],404);
         if($job['status']==='Awaiting confirmation'){jsonResponse(['requires_confirmation'=>true,'token'=>$token,'records'=>previewRecords(json_decode($job['result_json'],true,512,JSON_THROW_ON_ERROR)['records']??[]),'report'=>$job['report']]);}
         if($job['status']==='Failed')throw new RuntimeException($job['error_message']?:'The research job failed.');
-        if (strtotime((string)($job['created_at'] ?? '')) < time() - 86400) throw new RuntimeException('This research job is more than 24 hours old. Start it again to refresh the sources.');
         $siteConfig = is_file(__DIR__ . '/config.php') ? require __DIR__ . '/config.php' : [];
         $key = openAiApiKey(is_array($siteConfig) ? $siteConfig : []);
         $handle = curl_init('https://api.openai.com/v1/responses/' . rawurlencode($job['response_id']));
