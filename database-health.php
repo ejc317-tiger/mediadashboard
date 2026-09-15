@@ -14,13 +14,16 @@ try {
     $connection = database(false);
     $missingBeforeRepair = missingRequiredTables($connection);
     $missingColumnsBeforeRepair = missingRequiredColumns($connection);
+    $legacyCharacterSetsBeforeRepair = tablesNeedingUtf8mb4($connection);
     installSchema($connection);
     $missingAfterRepair = missingRequiredTables($connection);
     $missingColumnsAfterRepair = missingRequiredColumns($connection);
-    if ($missingAfterRepair !== [] || $missingColumnsAfterRepair !== []) throw new RuntimeException('Schema repair did not restore: ' . implode(', ', array_merge($missingAfterRepair, $missingColumnsAfterRepair)));
+    $legacyCharacterSetsAfterRepair = tablesNeedingUtf8mb4($connection);
+    if ($missingAfterRepair !== [] || $missingColumnsAfterRepair !== [] || $legacyCharacterSetsAfterRepair !== []) throw new RuntimeException('Schema repair did not restore: ' . implode(', ', array_merge($missingAfterRepair, $missingColumnsAfterRepair, $legacyCharacterSetsAfterRepair)));
     $repaired = array_values(array_diff($missingBeforeRepair, $missingAfterRepair));
     $repairedColumns = array_values(array_diff($missingColumnsBeforeRepair, $missingColumnsAfterRepair));
-    $repairs = array_merge($repaired, $repairedColumns);
+    $repairedCharacterSets = array_map(static fn(string $table): string => "$table character set", array_values(array_diff($legacyCharacterSetsBeforeRepair, $legacyCharacterSetsAfterRepair)));
+    $repairs = array_merge($repaired, $repairedColumns, $repairedCharacterSets);
     echo json_encode([
         'healthy' => true,
         'repaired' => $repaired,

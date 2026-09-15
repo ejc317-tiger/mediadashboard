@@ -79,6 +79,7 @@ function database(bool $install = true): PDO
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
+            $connection->exec('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
             break;
         } catch (PDOException $exception) {
             $lastError = $exception;
@@ -112,9 +113,10 @@ function installSchema(PDO $connection): void
         $connection->exec('CREATE TABLE IF NOT EXISTS schema_migrations (schema_hash CHAR(64) PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
         $check = $connection->prepare('SELECT 1 FROM schema_migrations WHERE schema_hash = ?');
         $check->execute([$hash]);
-        if ($check->fetchColumn() && requiredTablesExist($connection) && missingRequiredColumns($connection) === []) return;
+        if ($check->fetchColumn() && requiredTablesExist($connection) && missingRequiredColumns($connection) === [] && tablesNeedingUtf8mb4($connection) === []) return;
         $connection->exec($schema);
         repairRequiredColumns($connection);
+        repairTableCharacterSets($connection);
         $connection->prepare('INSERT INTO schema_migrations(schema_hash) VALUES(?) ON DUPLICATE KEY UPDATE applied_at=CURRENT_TIMESTAMP')->execute([$hash]);
     } finally {
         flock($lock, LOCK_UN);
@@ -164,6 +166,25 @@ function repairRequiredColumns(PDO $connection): void
     }
 }
 
+/** Return application tables whose text columns cannot safely store full Unicode. */
+function tablesNeedingUtf8mb4(PDO $connection): array
+{
+    $tables = requiredTableNames();
+    $placeholders = implode(',', array_fill(0, count($tables), '?'));
+    $statement = $connection->prepare("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders) AND (table_collation IS NULL OR table_collation NOT LIKE 'utf8mb4%')");
+    $statement->execute($tables);
+    return $statement->fetchAll(PDO::FETCH_COLUMN);
+}
+
+/** Upgrade legacy latin1/utf8 tables so reports can contain punctuation and any language. */
+function repairTableCharacterSets(PDO $connection): void
+{
+    foreach (tablesNeedingUtf8mb4($connection) as $table) {
+        if (!in_array($table, requiredTableNames(), true)) continue;
+        $connection->exec("ALTER TABLE `$table` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    }
+}
+
 /** Confirm that every table used by the dashboard is present in this database. */
 function requiredTablesExist(PDO $connection): bool
 {
@@ -173,7 +194,17 @@ function requiredTablesExist(PDO $connection): bool
 /** Return the application tables that are absent from the selected database. */
 function missingRequiredTables(PDO $connection): array
 {
-    $requiredTables = [
+    $requiredTables = requiredTableNames();
+    $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
+    $statement = $connection->prepare("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders)");
+    $statement->execute($requiredTables);
+    $existingTables = $statement->fetchAll(PDO::FETCH_COLUMN);
+    return array_values(array_diff($requiredTables, $existingTables));
+}
+
+function requiredTableNames(): array
+{
+    return [
         'users',
         'ai_update_runs',
         'ai_run_sources',
@@ -188,9 +219,4 @@ function missingRequiredTables(PDO $connection): array
         'spac_vehicles',
         'data_centers',
     ];
-    $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
-    $statement = $connection->prepare("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ($placeholders)");
-    $statement->execute($requiredTables);
-    $existingTables = $statement->fetchAll(PDO::FETCH_COLUMN);
-    return array_values(array_diff($requiredTables, $existingTables));
 }

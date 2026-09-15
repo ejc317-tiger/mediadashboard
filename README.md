@@ -36,6 +36,8 @@ Research job metadata is also stored in the `research_jobs` table without an arb
 
 Background submissions explicitly enable server-side response storage, cap tool calls by research depth, and bound the readable report to keep submission and later extraction reliable. If submission fails before OpenAI returns a job ID, the error identifies that stage separately; operators should confirm the PHP host permits outbound HTTPS to `api.openai.com`.
 
+The schema installer also upgrades legacy application tables to `utf8mb4`. This allows research reports to store typographic punctuation, non-Latin names, and other full-Unicode OpenAI output. Use **Settings → Check and repair database** once after deploying an upgrade to repair an older database immediately.
+
 The available chat-model selectors are populated from the models accessible to the saved API key, filtered to general chat/reasoning model families. The **AI chat** workspace provides an API-powered conversation with optional web search. Chat responses are submitted as background jobs and polled with short requests, so long answers do not depend on one fragile browser-to-server connection. It cannot embed the hosted chatgpt.com product or its account session, and chat messages never write to the dashboard databases.
 
 No company, PE firm, VC firm, investor, data-center, capacity, or activity record is embedded in the browser or seeded by the installer.
